@@ -24,9 +24,23 @@ export function stripReasoningTokens(text: string): string {
   );
   let out = finalMatch?.[1] ?? text;
 
-  out = out.replace(CHANNEL_HEADER, '');
-  out = out.replace(SPECIAL_TOKEN, '');
-  out = out.replace(LEADING_CHANNEL_WORD, '');
+  // Repeat the WHOLE strip until a full pass changes nothing. One pass is not
+  // enough: removing a token can REASSEMBLE the next one. `<|chan<|end|>nel|>`
+  // loses the inner `<|end|>` and becomes `<|channel|>` — a token that pass has
+  // already stepped over — and `<|scr<|end|>ipt|>` becomes `<|script|>` the same
+  // way. The channel/leading-word rules have the same problem in reverse: a
+  // header split by a nested token only becomes matchable after that token is
+  // gone. Termination is guaranteed: every pattern matches at least one
+  // character and each replacement is empty, so any changing pass strictly
+  // shortens the string.
+  let previous: string;
+  do {
+    previous = out;
+    out = out.replace(CHANNEL_HEADER, '');
+    out = out.replace(SPECIAL_TOKEN, '');
+    out = out.replace(LEADING_CHANNEL_WORD, '');
+  } while (out !== previous);
+
   return out.trim();
 }
 

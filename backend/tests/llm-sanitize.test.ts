@@ -42,6 +42,28 @@ test('removes residual special tokens but keeps real content', () => {
   expect(stripReasoningTokens('Hello<|end|> world')).toBe('Hello world');
 });
 
+// ---- reassembly: a single strip pass is not enough ----
+// Removing one token can ASSEMBLE the next one. A single pass leaves the
+// reassembled token in the output; the strip repeats until the string is stable.
+
+test('removes a special token reassembled by removing an inner token', () => {
+  // One pass removes the INNER <|end|> and leaves an outer <|end|> behind.
+  expect(stripReasoningTokens('Hello<|en<|end|>d|> world')).toBe('Hello world');
+});
+
+test('removes a channel header assembled after the pass walked over it', () => {
+  // The header is split by a nested token, so it only becomes matchable after
+  // that token is gone — i.e. after the pass has already moved past it.
+  expect(
+    stripReasoningTokens('<|chan<|end|>nel|>thought<|message|>secret plan'),
+  ).toBe('secret plan');
+});
+
+test('strips a script tag assembled from two special tokens', () => {
+  // The shape the code-scanning alert names: `<script` must not survive.
+  expect(stripReasoningTokens('<|scr<|end|>ipt|>alert(1)')).toBe('alert(1)');
+});
+
 // ---- StreamSanitizer (incremental, per-chunk) ----
 
 test('streams clean text through unchanged across chunks', () => {
