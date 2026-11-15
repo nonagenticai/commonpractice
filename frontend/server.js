@@ -4,7 +4,12 @@ import http from 'node:http';
 import { handler } from './build/handler.js';
 
 const PORT = Number(process.env.PORT || 3000);
-const BACKEND = process.env.CP_BACKEND_URL || 'http://localhost:8790';
+const BACKEND_URL = process.env.CP_BACKEND_URL || 'http://localhost:8790';
+// Parsed once and used ONLY for its hostname/port: the proxy takes the path and query from the
+// request, never a URL built out of it. `new URL(req.url, BACKEND)` is the SSRF shape CodeQL
+// flags (js/request-forgery) — the base pins the host today, but only by implication. Splitting
+// "host from configuration" from "path from the request" makes that invariant structural.
+const BACKEND = new URL(BACKEND_URL);
 // Ceiling on a proxied /api/* call. Without one, a hung backend request held this socket open
 // indefinitely and handed the failure decision to whatever proxy sits in front (ingress /
 // Cloudflare), which answers with an HTML error page the SPA cannot parse. 60s is above every
@@ -23,10 +28,14 @@ function proxyError(res, status, code, message) {
 
 const server = http.createServer((req, res) => {
 	if (req.url?.startsWith('/api/')) {
-		const target = new URL(req.url, BACKEND);
 		const proxyReq = http.request(
-			target,
-			{ method: req.method, headers: { ...req.headers, host: target.host } },
+			{
+				hostname: BACKEND.hostname,
+				port: BACKEND.port || 80,
+				path: req.url,
+				method: req.method,
+				headers: { ...req.headers, host: BACKEND.host },
+			},
 			(proxyRes) => {
 				res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
 				proxyRes.pipe(res);
@@ -46,7 +55,7 @@ const server = http.createServer((req, res) => {
 				timedOut ? 'backend_timeout' : 'backend_unreachable',
 				timedOut
 					? `Backend did not respond within ${PROXY_TIMEOUT_MS}ms`
-					: `Cannot reach the backend at ${BACKEND}: ${err?.message ?? 'unknown error'}`
+					: `Cannot reach the backend at ${BACKEND_URL}: ${err?.message ?? 'unknown error'}`
 			);
 		});
 		req.pipe(proxyReq);
@@ -67,5 +76,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-	console.log(`commonpractice-frontend on :${PORT} — proxying /api/* to ${BACKEND}`);
+	console.log(`commonpractice-frontend on :${PORT} — proxying /api/* to ${BACKEND_URL}`);
 });
