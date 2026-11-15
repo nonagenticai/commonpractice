@@ -10,6 +10,18 @@ export interface Route {
   handler: (req: Request, ...params: string[]) => Promise<Response>;
 }
 
+/** Escape every regex metacharacter so `text` matches exactly itself. */
+function escapeRegExpLiteral(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// The WHOLE pattern grammar: literal text and whole-segment `:name` placeholders.
+// Only these two tokens are substituted; every other character is literal and
+// escaped, so no registered path can inject regex syntax (a `.` in
+// `/api/audit/export.csv` used to match any character).
+const PATTERN_TOKEN = /(:\w+)/;
+const PARAM_TOKEN = /^:\w+$/;
+
 export class Router {
   private routes: Route[] = [];
 
@@ -18,13 +30,14 @@ export class Router {
     pattern: string,
     handler: (req: Request, ...params: string[]) => Promise<Response>,
   ): void {
-    const regexPattern = pattern
-      .replace(/\//g, '\\/')
-      .replace(/:(\w+)/g, '([^/]+)');
+    const source = pattern
+      .split(PATTERN_TOKEN)
+      .map((part) => (PARAM_TOKEN.test(part) ? '([^/]+)' : escapeRegExpLiteral(part)))
+      .join('');
 
     this.routes.push({
       method,
-      pattern: new RegExp(`^${regexPattern}$`),
+      pattern: new RegExp(`^${source}$`),
       template: pattern,
       handler,
     });
