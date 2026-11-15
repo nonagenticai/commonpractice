@@ -1,0 +1,24 @@
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/runner/_work/commonpractice/commonpractice/frontend[39m
+
+ [32m✓[39m src/lib/api/error-message.test.ts [2m([22m[2m239 tests[22m[2m)[22m[90m 61[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/icu-number-params.sites.test.ts [2m([22m[2m99 tests[22m[2m)[22m[90m 237[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-enforcement.backend-contract.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/lib/layout/navConfig.backend-contract.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.wire.test.ts [2m([22m[2m40 tests[22m[2m)[22m[90m 53[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/block-test-error-label.backend-contract.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 140[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.backend-contract.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 662[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ontology-axis-label.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/flow-summary-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/connection-test-label.test.ts [2m([22m[2m64 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/vote-surface-copy.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m src/lib/utils/format.locale.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 37[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/catalogs.test.ts [2m([22m[2m31 tests[22m[2m)[22m[90m 92[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-label.backend-contract.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/challenge-state.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/routes/docs/docs-cadence.backend-contract.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 55[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/challenge-lifecycle.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/placeholder-parity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/icu-number-params.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 74[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/notification-label.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 10[2mms[22m[39m

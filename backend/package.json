@@ -1,0 +1,41 @@
+{
+  "name": "commonpractice-backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "migrate": "bun run scripts/migrate.ts",
+    "seed": "bun run src/db/seed.ts",
+    "seed:dataset": "bun run scripts/seed-dataset.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "typecheck": "bunx tsc --noEmit",
+    "db:preflight": "bash scripts/db-preflight.sh",
+    "test": "bun test --timeout 30000",
+    "check:hooks": "bun run scripts/check-hook-timeouts.ts"
+  },
+  "engines": {
+    "bun": ">=1.3.13"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "drizzle-orm": "^0.45.4",
+    "exceljs": "^4.4.0",
+    "jose": "^6.2.17",
+    "nodemailer": "^10.5.0",
+    "papaparse": "^5.7.0",
+    "postgres": "^4.1.1",
+    "typescript": "^5.9.3",
+    "unzipper": "^0.12.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/nodemailer": "^8.0.2",
+    "@types/papaparse": "^5.5.2",
+    "drizzle-kit": "^0.31.11"
+  },
+  "license": "Apache-2.0"
+}

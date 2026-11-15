@@ -1,0 +1,21 @@
+-- 0048_users_tenant_id_idx.sql
+--
+-- `users.tenant_id` is the SEAT column — `seat-limit.ts` counts seats with
+-- `SELECT count(*) FROM users WHERE tenant_id = $1` — and it had no index, so every seat
+-- check was a sequential scan of the whole users table. That was tolerable while the only
+-- callers were the three human-driven onboarding routes (an invite is rare). It stopped
+-- being tolerable when the SSO/JIT first-login guard started counting seats on a path that
+-- an over-cap tenant re-enters on EVERY request from EVERY refused user: a seq scan holding
+-- one of the four DB_TX_POOL_MAX transaction slots, measured at 260 ms of added latency for
+-- unrelated tenants' transactions under 39 concurrent refused logins.
+--
+-- The same column is also the join/filter behind `homeTenantOf`, the members roster and the
+-- `tenantAdminIds` last-admin guard, all of which were doing the same scan.
+--
+-- Plain CREATE INDEX, deliberately NOT CONCURRENTLY: this repo applies migrations at backend
+-- startup inside ONE outer transaction with a per-file SAVEPOINT (db/migration-runner.ts),
+-- and CREATE INDEX CONCURRENTLY cannot run in a transaction block — it would abort the whole
+-- migration run. The write lock it takes instead is on a table with one row per human user,
+-- so the build is milliseconds.
+
+CREATE INDEX IF NOT EXISTS users_tenant_id_idx ON users (tenant_id);

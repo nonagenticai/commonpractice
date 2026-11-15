@@ -1,0 +1,250 @@
+@import 'tailwindcss';
+@import './lib/styles/tokens.css';
+
+/* Register the ported fonts so `font-sans`/`font-display` utilities resolve.
+ *
+ * ⛔ ARABIC AND HEBREW HAD NO BRAND TYPEFACE AT ALL. Measured against what Google actually serves,
+ * not assumed: `IBM Plex Sans` ships latin, latin-ext, cyrillic, cyrillic-ext, greek and vietnamese
+ * — and NO Arabic or Hebrew. `Fraunces` ships latin, latin-ext and vietnamese only. So every
+ * Arabic and Hebrew glyph in the product fell out of the stack: body text landed on whatever
+ * `-apple-system`/`sans-serif` resolves to per OS, and HEADINGS fell past `Georgia` (also no
+ * Arabic/Hebrew) to a generic `serif`. An ar/he reader saw two unrelated system faces, neither of
+ * them the brand, with the headings in a different classification from the body.
+ *
+ * `IBM Plex Sans Arabic` and `IBM Plex Sans Hebrew` are the real sibling families and are added to
+ * both stacks. Font fallback is PER GLYPH, so Latin text still renders in `IBM Plex Sans` exactly
+ * as before and only the Arabic/Hebrew codepoints reach the new entries.
+ *
+ * ⚠️ THIS COSTS THE OTHER SIX LOCALES NOTHING — verified, because "just add the font" is normally
+ * a page-weight regression. Google emits both families with `unicode-range` (arabic
+ * U+0600-06FF…, hebrew U+0590-05FF…), and a browser downloads a gated subset ONLY when it has to
+ * render a codepoint inside that range. An en/nl/de/fr/es/pl reader fetches zero extra bytes, and
+ * it is one combined `&family=` on the existing request, so not an extra round trip either.
+ *
+ * ⚠️ OPEN DESIGN DECISION, deliberately not made here: `Fraunces` is a SERIF display face and has
+ * no Arabic or Hebrew counterpart, so ar/he headings now render in Plex Arabic/Hebrew — legible,
+ * on-brand with the body, but SANS where Latin is serif. Matching the serif voice would mean
+ * choosing a real Arabic display face (Amiri and Noto Naskh are the usual candidates) and a Hebrew
+ * one, which is a brand call, not a bug fix. Falling through to an arbitrary system serif — the
+ * behaviour before this change — is strictly worse than either option.
+ */
+@theme {
+  --font-sans:
+    'IBM Plex Sans', 'IBM Plex Sans Arabic', 'IBM Plex Sans Hebrew', -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-display: 'Fraunces', 'IBM Plex Sans Arabic', 'IBM Plex Sans Hebrew', Georgia, serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+/* ---- reset / base ---- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+button { font: inherit; background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+body {
+  font-family: var(--font-sans);
+  color: var(--c-ink);
+  background: var(--c-white);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 { font-family: var(--font-display); letter-spacing: -0.01em; }
+
+/* ---- bidi: decorative direction glyphs ----
+   U+2192 (→) is NOT a bidi-mirrored character. Under dir="rtl" the bidi algorithm
+   leaves it pointing right, so a decorative "go / forward" affordance points
+   BACKWARD for every Arabic and Hebrew reader. Fix it visually, here — do NOT
+   translate the glyph and do NOT reverse the character in source.
+   ⛔ ONLY for glyphs that carry NO text meaning (aria-hidden decoration).
+   NEVER on a literal the user must read or copy — scaleX(-1) mirrors the
+   characters themselves, which would render real content unreadable.
+   `--cp-dir-flip` is exposed (and inherited) so a component that already owns a
+   transform can COMPOSE the flip rather than overwrite it — see StatCard's
+   hover slide, where a naive translateX would otherwise compound wrongly. */
+:root, [dir='ltr'] { --cp-dir-flip: 1; }
+[dir='rtl'] { --cp-dir-flip: -1; }
+.cp-dir-mirror { display: inline-block; transform: scaleX(var(--cp-dir-flip, 1)); }
+
+/* ============================================================
+   LAYOUT (ported from demo.html lines 95–289)
+   ============================================================ */
+.app {
+  --sidebar-w: 248px;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  background: var(--c-midnight);
+  color: #CBD5E1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 3px; }
+
+.brand {
+  padding: 20px 20px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid #1E293B;
+}
+.brand-mark { width: 36px; height: 36px; position: relative; flex-shrink: 0; }
+.brand-mark svg { width: 100%; height: 100%; }
+.brand-name {
+  font-family: var(--font-display); font-weight: 600; font-size: 19px;
+  color: #fff; letter-spacing: -0.01em; line-height: 1;
+}
+.brand-text { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+/* "Early access" — a quiet outlined pill beside the product name, visible to every role. */
+.brand-badge {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em; line-height: 1;
+  color: var(--c-teal-mid); border: 1px solid currentColor; border-radius: 999px;
+  padding: 3px 7px; white-space: nowrap;
+}
+.sidebar-feedback { padding-top: 0; padding-bottom: 0; }
+
+.nav-group { padding: 14px 12px 4px; }
+.nav-group-label {
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--c-faint); padding: 6px 10px; font-weight: 600;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px; padding: 8px 10px;
+  border-radius: var(--r); font-size: 13.5px; color: #CBD5E1;
+  cursor: pointer; position: relative; width: 100%; text-align: start;
+}
+.nav-item:hover { background: #15203F; color: #fff; }
+.nav-item.active { background: #15203F; color: #fff; }
+.nav-item.active::before {
+  content: ""; position: absolute; inset-inline-start: 0; top: 6px; bottom: 6px;
+  width: 3px; background: var(--c-teal-mid); border-radius: 0 2px 2px 0;
+}
+.nav-item .icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.85; }
+.nav-item .nav-badge {
+  margin-inline-start: auto; font-size: 10.5px; background: var(--c-coral); color: #fff;
+  padding: 1px 6px; border-radius: 8px; font-weight: 600;
+}
+
+.sidebar-foot {
+  margin-top: auto; padding: 12px 16px 16px; border-top: 1px solid #1E293B;
+  display: flex; align-items: center; gap: 10px;
+}
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #14B8A6, #F97316);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.sidebar-foot .name { font-size: 12.5px; color: #fff; font-weight: 500; }
+.sidebar-foot .role { font-size: 10.5px; color: var(--c-faint); }
+.sidebar-foot-who { min-width: 0; }
+.sidebar-foot-who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-signout {
+  /* inset the button to the footer's inline END, not its physical right — in RTL the sign-out
+     button otherwise collapses against the user's name instead of pinning to the far edge. */
+  margin-inline-start: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent;
+  background: transparent; color: var(--c-faint); cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sidebar-signout:hover { background: #1E293B; color: #fff; border-color: #334155; }
+.sidebar-signout:disabled { opacity: 0.5; cursor: default; }
+.sidebar-signout .icon { width: 17px; height: 17px; }
+
+/* ---- Desktop collapse: the sidebar becomes a 64px icon rail ----
+   Driven by `.app.sidebar-collapsed` (ShellLayout, from stores/sidebar.svelte.ts). Scoped to 768px
+   and up: below that the sidebar is the phone drawer, which always shows its labels. The label is
+   visually hidden, not removed, so it stays the link's accessible name; `title` is the tooltip. */
+.sidebar-collapse { display: none; }
+@media (min-width: 768px) {
+  .app.sidebar-collapsed { --sidebar-w: 64px; }
+  .sidebar-collapse {
+    display: flex; flex-shrink: 0; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent;
+    color: var(--c-faint); cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .sidebar-collapse:hover { background: #1E293B; color: #fff; border-color: #334155; }
+  .sidebar-collapse .icon { width: 17px; height: 17px; }
+  .sidebar:not(.collapsed) .sidebar-collapse { margin-inline-start: auto; }
+  .sidebar:not(.collapsed) .sidebar-collapse + .sidebar-signout { margin-inline-start: 0; }
+
+  .sidebar.collapsed .brand { padding: 16px 14px; justify-content: center; }
+  .sidebar.collapsed .brand-text,
+  .sidebar.collapsed .nav-group-label,
+  .sidebar.collapsed .sidebar-foot-who { display: none; }
+  .sidebar.collapsed .nav-group { padding: 8px 10px 2px; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 9px 0; }
+  .sidebar.collapsed .nav-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .sidebar.collapsed .nav-item .nav-badge {
+    position: absolute; top: 3px; inset-inline-end: 6px; margin: 0;
+    font-size: 9.5px; padding: 0 4px; line-height: 14px;
+  }
+  .sidebar.collapsed .sidebar-foot { flex-direction: column; padding: 12px 0 14px; gap: 8px; }
+  .sidebar.collapsed .sidebar-signout { margin-inline-start: 0; }
+}
+
+/* ---- Main ---- */
+.main { display: flex; flex-direction: column; overflow: hidden; background: var(--c-white); }
+.topbar {
+  height: 56px; background: var(--c-white); border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; padding: 0 24px; gap: 16px; flex-shrink: 0;
+}
+.search {
+  flex: 1; max-width: 480px; display: flex; align-items: center; gap: 8px;
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: var(--r); padding: 7px 12px;
+}
+.search input { flex: 1; background: none; border: none; outline: none; font-size: 13px; color: var(--c-ink); }
+.search input::placeholder { color: var(--c-faint); }
+.search .kbd {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--c-muted);
+  background: var(--c-white); border: 1px solid var(--c-border); padding: 1px 5px; border-radius: 3px;
+}
+.topbar-spacer { flex: 1; }
+.icon-btn {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r); color: var(--c-muted); position: relative;
+}
+.icon-btn:hover { background: var(--c-surface); color: var(--c-ink); }
+.icon-btn .dot {
+  position: absolute; top: 7px; inset-inline-end: 7px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--c-coral); border: 2px solid var(--c-white);
+}
+
+.screens { flex: 1; overflow-y: auto; scroll-behavior: smooth; padding: 28px 32px; }
+
+/* ---- Phone width: the sidebar becomes an off-canvas drawer ----
+   ⛔ The 248px sidebar column never collapsed, so at 390px the page got 142px and EVERY screen
+   scrolled sideways (scrollWidth 541). Below 768px the grid is one column, the sidebar slides in
+   from the inline START (mirrored in RTL via --cp-dir-flip) when ShellLayout sets `.open`, and is
+   `visibility: hidden` while closed so its links are not in the tab order. */
+.menu-btn { display: none; }
+.nav-backdrop { display: none; }
+.main { min-width: 0; }
+@media (max-width: 767.98px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 60;
+    width: min(280px, 85vw);
+    transform: translateX(calc(-100% * var(--cp-dir-flip, 1)));
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+  /* visibility switches at once on OPEN (so openNav can focus inside); closing keeps the 0.2s fade */
+  .sidebar.open { transform: none; visibility: visible; transition: transform 0.2s ease, visibility 0s; }
+  .nav-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(15, 23, 42, 0.45); }
+  .menu-btn { display: flex; flex-shrink: 0; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .search { min-width: 0; }
+  .search input { min-width: 0; width: 100%; }
+  .search .kbd { display: none; }
+  .screens { padding: 20px 16px; }
+}

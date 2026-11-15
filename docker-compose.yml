@@ -1,0 +1,71 @@
+# Dev/test Postgres for Common Practice.
+# Session 0 decision (2026-06-05): local postgres:18 container; the shared CI
+# :5433 DB+user is provisioned later when wiring CI. Maps host 5433 -> container
+# 5432 so DATABASE_URL matches drizzle.config's default and never collides with a
+# local 5432 Postgres. Internal+external port are NOT identical here on purpose —
+# this is a dev-only convenience container, not a cluster service.
+services:
+  db:
+    image: postgres:18
+    container_name: commonpractice-db
+    # The dev :5433 is known-flaky under heavy concurrent load (it can crash-recover or be
+    # OOM/SIGKILLed by Docker Desktop). Auto-restart so a crash self-heals instead of leaving
+    # the backend pointed at a dead DB; shm_size gives Postgres enough shared memory to avoid
+    # one common crash source. The backend also now survives a DB drop (see server.ts).
+    restart: unless-stopped
+    shm_size: 256m
+    # ⛔ MEMORY CAP — the actual cause of the recurring ":5433 is wedged" outage, which is NOT a
+    # Postgres tuning problem. Docker Desktop here has a FIXED ~969 MB total that cannot be raised
+    # (the Mac has 8 GB and Claude Code sessions consume most of it), and PARALLEL agent sessions
+    # each leave their own throwaway Postgres running — during one session `docker ps` showed
+    # `bf-drift-pg`, `cp-sigterm-pg` and `md-test-pg` alongside this one: FOUR Postgres instances
+    # sharing 969 MB. The result is swap thrash, then symptoms that look like a DB bug and are not:
+    #   * `checkpoint complete … write=76.005 s` to flush FORTY-FIVE buffers (~360 KB)
+    #   * `resetting unlogged relations (cleanup), elapsed time: 20.39 s`
+    #   * `write CONNECT_TIMEOUT` / `CONNECTION_CLOSED localhost:5433` mid-suite
+    #   * every hook failing as `(fail) (unnamed) [5003ms]`, indistinguishable from a real bug
+    # and eventually the daemon itself wedging (`docker ps` timing out after 60 s).
+    # `fsync=off` and friends below were an earlier attempt at this and did NOT fix it, because the
+    # bottleneck is memory pressure, not durability work.
+    # Capping this container means it gets OOM-killed cleanly (and `restart: unless-stopped` brings
+    # it straight back) instead of dragging the whole daemon down with it. 512m is comfortably above
+    # what the suite needs and leaves room for one sibling container.
+    mem_limit: 512m
+    mem_reservation: 256m
+    # DEV-ONLY durability-off: this is a disposable dev/test DB. Without these, a crash (or the
+    # heavy concurrent `bun test` load) leaves the data dir needing a 50s+ fsync recovery on the
+    # next start, during which connections get "the database system is in recovery mode" and the
+    # healthcheck flaps — the recurring :5433 crash-loop. fsync/synchronous_commit/full_page_writes
+    # off removes the slow recovery (and most of the crash surface). NEVER use these in prod.
+    command:
+      - postgres
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+      # Headroom so a full `bun test` (many files sharing the app pool + per-request reserved
+      # connections for RLS) doesn't exhaust connections and flap hook timeouts. Dev-only.
+      - -c
+      - max_connections=200
+    environment:
+      POSTGRES_DB: commonpractice
+      POSTGRES_USER: commonpractice
+      POSTGRES_PASSWORD: commonpractice
+    ports:
+      - "5433:5432"
+    volumes:
+      # pg18 images store data in a major-version subdir; mount the parent
+      # (/var/lib/postgresql), NOT /data, or the container refuses to start.
+      - cp_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commonpractice -d commonpractice"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      # Don't count the (possibly slow) first boot / recovery as unhealthy.
+      start_period: 40s
+
+volumes:
+  cp_pgdata:

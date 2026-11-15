@@ -1,0 +1,136 @@
+{
+  "$comment": "Phase 3.2 Insurance overlay. `industry: insurance` => entities WITHOUT a `department` are scope=industry (industry-wide); entities WITH a `department` are scope=industry_dept (the matrix cell that sharpens/extends the overlay for that department). Relations to generic entities (e.g. Customer) resolve globally.",
+  "industry": "insurance",
+  "entities": [
+    {
+      "name": "Policy",
+      "label": "Policy",
+      "synonyms": ["pol", "pol_no", "policy_no"],
+      "description": "An insurance contract between the insurer and a policyholder.",
+      "attributes": [
+        { "name": "policy_no", "type": "string", "synonyms": ["pol_no", "policy_number"] },
+        { "name": "holder", "type": "string", "synonyms": ["policyholder"], "pii": true },
+        { "name": "premium", "type": "number", "synonyms": ["prem"] },
+        { "name": "effective_date", "type": "date", "synonyms": ["start_date"] },
+        { "name": "expiry_date", "type": "date", "synonyms": ["renewal_date"] }
+      ],
+      "relations": [
+        { "to": "Customer", "predicate": "heldBy", "label": "held by", "cardinality": "many-to-one" },
+        { "to": "Coverage", "predicate": "hasCoverage", "label": "has coverage", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Claim",
+      "label": "Claim",
+      "synonyms": ["clm", "claim_no"],
+      "description": "A request for payment under a policy after a covered loss.",
+      "attributes": [
+        { "name": "claim_id", "type": "string", "synonyms": ["clm_id", "claim_no"] },
+        { "name": "amount", "type": "number", "synonyms": ["clm_amt", "claim_amount", "amt"] },
+        { "name": "status", "type": "string", "synonyms": ["clm_status"] },
+        { "name": "filed_date", "type": "date", "synonyms": ["filed", "date_filed"] },
+        { "name": "policy_no", "type": "string", "synonyms": ["pol_no"] }
+      ],
+      "relations": [
+        { "to": "Policy", "predicate": "under", "label": "filed under", "cardinality": "many-to-one" },
+        { "to": "Adjuster", "predicate": "assignedTo", "label": "assigned to", "cardinality": "many-to-one" },
+        { "to": "Coverage", "predicate": "against", "label": "claimed against", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Coverage",
+      "label": "Coverage",
+      "synonyms": ["cover", "cvg"],
+      "description": "A specific risk a policy insures against, with limits and deductible.",
+      "attributes": [
+        { "name": "coverage_id", "type": "string" },
+        { "name": "kind", "type": "string", "synonyms": ["type", "peril"] },
+        { "name": "limit", "type": "number", "synonyms": ["sum_insured"] },
+        { "name": "deductible", "type": "number", "synonyms": ["excess"] }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Premium",
+      "label": "Premium",
+      "synonyms": ["prem"],
+      "description": "The amount paid for an insurance policy.",
+      "attributes": [
+        { "name": "premium_id", "type": "string" },
+        { "name": "amount", "type": "number" },
+        { "name": "frequency", "type": "string", "synonyms": ["cadence"] }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Adjuster",
+      "label": "Adjuster",
+      "synonyms": ["loss_adjuster", "examiner"],
+      "description": "The person who investigates and settles a claim.",
+      "attributes": [
+        { "name": "adjuster_id", "type": "string" },
+        { "name": "name", "type": "string", "pii": true },
+        { "name": "region", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Underwriting",
+      "label": "Underwriting",
+      "synonyms": ["uw"],
+      "description": "The assessment of risk and pricing for a policy.",
+      "attributes": [
+        { "name": "underwriting_id", "type": "string", "synonyms": ["uw_id"] },
+        { "name": "risk_score", "type": "number", "synonyms": ["risk"] },
+        { "name": "decision", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Policy", "predicate": "prices", "label": "prices", "cardinality": "one-to-one" }
+      ]
+    },
+
+    {
+      "name": "Claim",
+      "label": "Claim (Claims desk)",
+      "department": "Claims",
+      "synonyms": ["clm", "claim_no", "loss"],
+      "description": "Claims-department view of a claim: adds triage, fraud and settlement detail.",
+      "attributes": [
+        { "name": "adjuster_notes", "type": "string", "description": "Free-text triage / investigation notes." },
+        { "name": "fraud_score", "type": "number", "synonyms": ["fraud_risk"], "description": "Model-scored fraud likelihood." },
+        { "name": "settlement_amount", "type": "number", "synonyms": ["settled_amt", "payout"] },
+        { "name": "reserve", "type": "number", "synonyms": ["case_reserve"] }
+      ],
+      "relations": []
+    },
+    {
+      "name": "PolicyholderSegment",
+      "label": "Policyholder Segment",
+      "department": "Marketing",
+      "synonyms": ["ph_segment", "renewal_segment"],
+      "description": "A marketing segment of policyholders defined for renewal/upsell campaigns.",
+      "attributes": [
+        { "name": "segment_id", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "renewal_window", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Policy", "predicate": "derivedFrom", "label": "derived from", "cardinality": "many-to-many" }
+      ]
+    },
+    {
+      "name": "RenewalCampaign",
+      "label": "Renewal Campaign",
+      "department": "Marketing",
+      "synonyms": ["renewal_drive"],
+      "description": "A marketing campaign targeting policyholders approaching renewal.",
+      "attributes": [
+        { "name": "campaign_id", "type": "string" },
+        { "name": "renewal_month", "type": "string" }
+      ],
+      "relations": [
+        { "to": "PolicyholderSegment", "predicate": "targets", "label": "targets", "cardinality": "many-to-one" }
+      ]
+    }
+  ]
+}

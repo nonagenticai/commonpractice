@@ -1,0 +1,38 @@
+-- 0052_drop_mcp_tools.sql
+--
+-- `mcp_tools` was never wired to a runtime, and that makes it worse than dead weight: it is a
+-- loaded trap pointed at the agent loop.
+--
+-- The inventory. `mcp_tool_versions` has ZERO reads and ZERO writes anywhere in the codebase.
+-- `mcp_tools` has exactly two reads and zero writes, both in `ai/mcp-server.ts`. No API route
+-- creates a row, no frontend screen references either table, no seed and no test fixture inserts
+-- one, and prod holds 0 rows in both. Nothing has ever put a row in them by any path.
+--
+-- WHY the read path is a trap rather than merely inert. `listTools()` merged the DB rows into
+-- `tools/list`, and `ai/agent.ts` maps that list straight into the model's tool catalogue. So the
+-- first row anyone inserted would ADVERTISE a tool to the LLM — and `tools/call` would then hard-
+-- refuse it with `tool_not_executable`, because `impl` is a declaration with no executor anywhere
+-- in the build. The table's only reachable behaviour is therefore to make the product strictly
+-- worse: a tool that always errors, burning an agent turn and the tokens with it, every attempt.
+-- The half that returns `[]` is the only half that was ever safe.
+--
+-- WHY not build the runtime instead. Because the capability already shipped under another name.
+-- `building_blocks` + `block_versions` (tenant-scoped RLS, 0037) are customer-authored units of
+-- executable behaviour WITH a sandbox, a linter, a test runner, versioning, RBAC, a UI, and an
+-- MCP authoring suite on top (`create_block`, `save_block_version`, `publish_block`, `lint_block`,
+-- `simulate_block`, `run_block_test`, `propose_block_patch`). Keeping `mcp_tools` would fork the
+-- product's extension story into a second, weaker, unsandboxed mechanism competing with the one
+-- that works. If MCP-native custom tools are ever wanted, the right build is a thin projection of
+-- an already-PUBLISHED BLOCK into `tools/list` — which reuses the sandbox and needs no table here.
+--
+-- SAFETY on a live prod DB (migrations run at backend STARTUP, not in an init container): both
+-- tables hold 0 rows and NOTHING references them — no inbound foreign keys from any other table,
+-- no views, no functions. Their 0028 RLS policies and their indexes drop with the tables. Ordered
+-- child-first because `mcp_tool_versions.tool_id -> mcp_tools.id` is the one FK involved, though
+-- it is ON DELETE CASCADE and the tables are empty either way. `IF EXISTS` so a re-run, or a DB
+-- provisioned after this migration lands, is a no-op rather than an error.
+--
+-- External MCP clients see byte-identical `tools/list` output: the DB half has always returned [].
+
+DROP TABLE IF EXISTS mcp_tool_versions;
+DROP TABLE IF EXISTS mcp_tools;

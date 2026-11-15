@@ -1,0 +1,36 @@
+# deps
+# BOTH forms, deliberately. `node_modules/` (trailing slash) matches only a real DIRECTORY, so a
+# `node_modules` SYMLINK — which is how a git worktree is usually wired to the main checkout's
+# install — is NOT ignored by it. A bare `git add -A` in a worktree then commits the symlink, and CI
+# dies at `bun install --frozen-lockfile` with `ENOENT: could not open the "node_modules" directory`,
+# because the link points at a path that exists only on the developer's machine. Cost one red CI run.
+node_modules/
+node_modules
+# builds — anchor to the actual adapter-node output dir. An unanchored `build/`
+# also matched src/routes/build/ + src/lib/components/build/ (the core Build
+# canvas), silently excluding the app's centerpiece from the repo + every deploy.
+/frontend/build/
+.svelte-kit/
+dist/
+# env
+.env
+.env.*
+!.env.example
+# runtime scratch (per-run sandbox dirs, Session 3+)
+.scratch/
+# local verification evidence (screenshots/recordings from live drives) — not source
+.evidence/
+# logs / os
+*.log
+.DS_Store
+.playwright-mcp/
+
+# Local git worktrees used for parallel agent workstreams — never part of the tree.
+# (They were briefly committed as embedded-repo gitlinks by a `git add -A`; this prevents a repeat.)
+.worktrees/
+
+# ⛔ EXCEPTION to the `*.log` rule above. These are TEST FIXTURES, not logs: captured CI output that
+# backend/tests/ci-suite-guard.test.ts feeds to .github/scripts/assert-suite-ran.sh. Without this
+# negation they are silently absent in a fresh clone and in CI, and the guard test fails there while
+# passing on the machine that wrote them — a green-locally/red-in-CI trap with no visible cause.
+!backend/tests/fixtures/ci-logs/*.log

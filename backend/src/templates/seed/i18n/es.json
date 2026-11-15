@@ -1,0 +1,350 @@
+{
+  "locale": "es",
+  "templates": {
+    "ai//extract-fields": {
+      "label": "Extraer campos",
+      "description": "Extrae un conjunto estructurado de campos a partir de texto libre mediante el modelo de lenguaje gestionado (ctx.llm).",
+      "tags": ["extracción", "estructurado", "nlp"],
+      "preconditions": [
+        "El texto de origen se recibe en `text`",
+        "Un esquema de campos de destino se recibe en `schema`"
+      ],
+      "postconditions": [
+        "`fields` es un objeto indexado por los campos del esquema",
+        "Los campos ausentes son null en lugar de inventados"
+      ],
+      "steps": [
+        { "label": "Construir el prompt", "detail": "Indica al modelo que devuelva SOLO JSON conforme al esquema; enumera cada campo + su tipo." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm() con el texto; solicita una salida JSON estricta." },
+        { "label": "Analizar + proteger", "detail": "Analiza el JSON; fuerza los tipos; deja en null todo lo que no se encuentre (nunca inventes)." }
+      ]
+    },
+    "ai//classify": {
+      "label": "Clasificar",
+      "description": "Asigna al texto de entrada la etiqueta más adecuada de un conjunto fijo, con una puntuación de confianza.",
+      "tags": ["clasificación", "etiquetado", "nlp"],
+      "preconditions": [
+        "El texto de entrada está en `text`",
+        "Un conjunto cerrado de etiquetas está en `labels`"
+      ],
+      "postconditions": [
+        "`label` es una de las etiquetas facilitadas (o un `unknown` explícito)",
+        "`confidence` está entre 0 y 1"
+      ],
+      "steps": [
+        { "label": "Restringir las opciones", "detail": "Pide al modelo que elija exactamente una etiqueta del conjunto facilitado." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm(); pide { label, confidence } en JSON." },
+        { "label": "Validar", "detail": "Rechaza cualquier etiqueta fuera del conjunto; recurre a unknown con confianza baja." }
+      ]
+    },
+    "ai//summarize": {
+      "label": "Resumir",
+      "description": "Genera un resumen del texto de entrada con la longitud y el tono controlados.",
+      "tags": ["resumen", "nlp"],
+      "preconditions": [
+        "El texto de entrada está en `text`"
+      ],
+      "postconditions": [
+        "`summary` respeta la longitud máxima + el tono solicitados"
+      ],
+      "steps": [
+        { "label": "Fijar las restricciones", "detail": "Codifica max_lines + el tono en la instrucción de sistema." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm() con el texto y las restricciones." },
+        { "label": "Recortar", "detail": "Aplica el límite de líneas de forma defensiva después de que responda el modelo." }
+      ]
+    },
+    "ai//generate-draft": {
+      "label": "Redactar un borrador",
+      "description": "Redacta contenido a partir de un briefing breve en el tono elegido (correo, respuesta, descripción, …).",
+      "tags": ["generación", "redacción", "nlp"],
+      "preconditions": [
+        "Se facilita un briefing en `brief`"
+      ],
+      "postconditions": [
+        "`draft` es un primer borrador listo para editar en el tono solicitado"
+      ],
+      "steps": [
+        { "label": "Enmarcar la tarea", "detail": "Indica al modelo el público, el propósito y el tono." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm() con el briefing; mantenlo editable, no definitivo." },
+        { "label": "Devolver", "detail": "Devuelve el texto del borrador para que una persona lo revise + lo envíe." }
+      ]
+    },
+    "ai//route-by-intent": {
+      "label": "Enrutar por intención",
+      "description": "Detecta la intención del usuario en un mensaje y lo dirige a uno de un conjunto fijo de manejadores.",
+      "tags": ["intención", "enrutamiento", "nlp"],
+      "preconditions": [
+        "Un mensaje está en `message`",
+        "Un conjunto de intenciones candidatas está en `intents`"
+      ],
+      "postconditions": [
+        "`intent` es una de las candidatas (o `fallback`)",
+        "`confidence` está entre 0 y 1"
+      ],
+      "steps": [
+        { "label": "Describir las intenciones", "detail": "Da al modelo una descripción de una línea por cada intención candidata." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm(); pide { intent, confidence } en JSON." },
+        { "label": "Filtrar", "detail": "Por debajo de un umbral de confianza, dirige a fallback en lugar de adivinar." }
+      ]
+    },
+    "ai//redact-pii": {
+      "label": "Enmascarar datos personales",
+      "description": "Detecta y enmascara datos personales (nombres, correos, teléfonos, identificadores) en texto libre.",
+      "tags": ["datos personales", "enmascarado", "privacidad"],
+      "preconditions": [
+        "El texto de entrada está en `text`",
+        "Los tipos de datos personales que se deben enmascarar están en `kinds`"
+      ],
+      "postconditions": [
+        "`redacted` sustituye cada fragmento detectado por un marcador con su tipo",
+        "`found` enumera lo detectado (tipo + recuento), nunca los valores originales"
+      ],
+      "steps": [
+        { "label": "Especificar los tipos", "detail": "Indica al modelo qué tipos de datos personales debe buscar (correo, teléfono, nombre, id)." },
+        { "label": "Llamar al modelo", "detail": "Usa ctx.llm(); pide los fragmentos que hay que enmascarar, no los valores originales." },
+        { "label": "Enmascarar", "detail": "Sustituye cada fragmento por [REDACTED:<kind>]; contabiliza los recuentos en `found`." }
+      ]
+    },
+    "logic//validate-record": {
+      "label": "Validar registro",
+      "description": "Comprueba un registro frente a un conjunto de reglas de campo; deja pasar los registros válidos y recopila los motivos de los inválidos.",
+      "tags": ["validación", "control", "calidad de datos"],
+      "preconditions": [
+        "Hay un objeto de registro disponible en la entrada `record`",
+        "Hay definido un conjunto de reglas de campo (obligatorio / tipo / rango)"
+      ],
+      "postconditions": [
+        "`valid` solo es true cuando se cumplen todas las reglas",
+        "`errors` recoge un motivo legible por cada regla incumplida"
+      ],
+      "steps": [
+        { "label": "Cargar el conjunto de reglas", "detail": "Lee las reglas por campo desde la entrada `rules` (obligatorio, tipo, mín./máx., patrón)." },
+        { "label": "Evaluar cada campo", "detail": "Para cada regla, lee record[field] y compruébalo; añade un mensaje a errors si falla." },
+        { "label": "Decidir", "detail": "valid = errors.length === 0; devuelve ambos para que el flujo posterior pueda ramificar." }
+      ]
+    },
+    "logic//route-by-rule": {
+      "label": "Enrutar por regla (tabla de decisión)",
+      "description": "Elige una rama evaluando una tabla de decisión ordenada sobre la entrada — gana la primera coincidencia.",
+      "tags": ["enrutamiento", "tabla de decisión", "ramificación"],
+      "preconditions": [
+        "Hay un objeto de entrada disponible en `item`",
+        "Hay definida una lista ordenada de reglas (condición → ruta)"
+      ],
+      "postconditions": [
+        "`route` es la etiqueta de la primera regla coincidente, o la ruta por defecto",
+        "`matched` indica si se activó alguna regla"
+      ],
+      "steps": [
+        { "label": "Leer la tabla de decisión", "detail": "Cada regla es { when: {field, op, value}, route }; evalúa de arriba abajo." },
+        { "label": "Buscar la primera coincidencia", "detail": "Devuelve la ruta de la primera regla cuya condición se cumple para `item`." },
+        { "label": "Recurrir al valor por defecto", "detail": "Si no coincide ninguna regla, devuelve la ruta por defecto configurada y matched=false." }
+      ]
+    },
+    "logic//approve-reject": {
+      "label": "Aprobar / rechazar (doble validación)",
+      "description": "Somete un elemento a una política interna y a una decisión humana explícita, dejando constancia de quién decidió y por qué.",
+      "tags": ["aprobación", "doble validación", "gobernanza"],
+      "preconditions": [
+        "El elemento en revisión está en `item`",
+        "Se facilitan una decisión (`approve` | `reject`) y la identidad del revisor"
+      ],
+      "postconditions": [
+        "`approved` refleja la decisión del revisor tras las comprobaciones de política",
+        "Se adjunta una pista de auditoría (revisor, motivo, marca de tiempo)"
+      ],
+      "steps": [
+        { "label": "Aplicar las comprobaciones de política", "detail": "Ejecuta primero los controles automáticos; rechaza automáticamente todo lo que incumpla la política, sea cual sea la entrada humana." },
+        { "label": "Registrar la decisión humana", "detail": "Captura la decisión, el revisor y el motivo para la pista de auditoría." },
+        { "label": "Emitir el resultado", "detail": "approved = policyPassed && decision === 'approve'; incluye el registro de la decisión." }
+      ]
+    },
+    "logic//dedupe": {
+      "label": "Eliminar filas duplicadas",
+      "description": "Fusiona las filas que comparten una clave, conserva una fila superviviente elegida y cuenta los duplicados eliminados.",
+      "tags": ["duplicados", "limpieza", "calidad de datos"],
+      "preconditions": [
+        "Hay una lista de filas disponible en `rows`",
+        "Hay configurada una clave de deduplicación (uno o varios campos)"
+      ],
+      "postconditions": [
+        "`rows` contiene como mucho una fila superviviente por clave",
+        "`removed` cuenta cuántos duplicados se descartaron"
+      ],
+      "steps": [
+        { "label": "Construir la clave", "detail": "Calcula una clave compuesta por fila a partir de los campos de clave configurados." },
+        { "label": "Elegir la superviviente", "detail": "Para cada clave conserva la primera fila (o la más reciente según `tiebreak`); descarta el resto." },
+        { "label": "Informar", "detail": "Devuelve las filas deduplicadas y el número de eliminadas." }
+      ]
+    },
+    "logic//enrich-lookup": {
+      "label": "Enriquecer mediante tabla de referencia",
+      "description": "Une cada fila con una tabla de referencia por una clave e incorpora los campos de referencia coincidentes.",
+      "tags": ["enriquecimiento", "unión", "búsqueda"],
+      "preconditions": [
+        "Las filas que hay que enriquecer están en `rows`",
+        "Están disponibles un conjunto de datos o tabla de referencia y la clave de unión"
+      ],
+      "postconditions": [
+        "Cada fila incorpora los campos de referencia cuando hay coincidencia",
+        "`unmatched` cuenta las filas sin coincidencia en la referencia"
+      ],
+      "steps": [
+        { "label": "Indexar la referencia", "detail": "Construye un mapa de la clave de unión a la fila de referencia para búsquedas en O(1)." },
+        { "label": "Fusionar", "detail": "Para cada fila de entrada, busca por clave e incorpora los campos de referencia (en caso de conflicto gana la entrada)." },
+        { "label": "Registrar los fallos", "detail": "Cuenta las filas sin coincidencia para poder supervisar la calidad." }
+      ]
+    },
+    "logic//threshold-flag": {
+      "label": "Marcar por umbral",
+      "description": "Puntúa cada elemento y marca para revisión los que superan un umbral configurable.",
+      "tags": ["puntuación", "marcado", "supervisión"],
+      "preconditions": [
+        "Los elementos que hay que puntuar están en `items`",
+        "Hay configurados un campo numérico y un umbral"
+      ],
+      "postconditions": [
+        "`flagged` enumera los elementos que superan el umbral",
+        "`count` es el número de elementos marcados"
+      ],
+      "steps": [
+        { "label": "Leer la métrica", "detail": "Extrae el campo numérico de cada elemento." },
+        { "label": "Comparar", "detail": "Marca los elementos donde value >= threshold (o <= para límites inferiores)." },
+        { "label": "Recopilar", "detail": "Devuelve el subconjunto marcado y su recuento." }
+      ]
+    },
+    "logic//map-transform": {
+      "label": "Asignar / transformar",
+      "description": "Remodela cada fila a un esquema de destino mediante una asignación de campos, descartando o renombrando según la configuración.",
+      "tags": ["transformación", "asignación", "remodelado"],
+      "preconditions": [
+        "Las filas de origen están en `rows`",
+        "Hay configurada una asignación de campos (origen → destino)"
+      ],
+      "postconditions": [
+        "Cada fila de salida contiene solo los campos de destino asignados",
+        "Se conserva el orden de las filas"
+      ],
+      "steps": [
+        { "label": "Leer la asignación", "detail": "La asignación es { targetField: sourceField }." },
+        { "label": "Proyectar cada fila", "detail": "Construye un objeto nuevo por fila usando la asignación; omite los campos no asignados." },
+        { "label": "Devolver", "detail": "Emite las filas transformadas en el orden original." }
+      ]
+    },
+    "logic//aggregate": {
+      "label": "Agregar / agrupar",
+      "description": "Agrupa las filas por una clave y calcula agregados (recuento / suma / media) por grupo.",
+      "tags": ["agregación", "agrupación", "resumen"],
+      "preconditions": [
+        "Las filas están en `rows`",
+        "Hay configuradas una clave de agrupación y las medidas que hay que agregar"
+      ],
+      "postconditions": [
+        "`groups` contiene una fila de resumen por cada clave distinta",
+        "Cada resumen lleva los agregados solicitados"
+      ],
+      "steps": [
+        { "label": "Repartir", "detail": "Agrupa las filas por el campo group_by configurado." },
+        { "label": "Reducir", "detail": "Por grupo, calcula el recuento y la suma/media de cada campo de medida." },
+        { "label": "Emitir", "detail": "Devuelve una fila por grupo con los agregados." }
+      ]
+    },
+    "ui//form": {
+      "label": "Formulario",
+      "description": "Recoge y valida la entrada del usuario frente a un esquema de campos y emite los valores capturados al enviar.",
+      "tags": ["formulario", "entrada", "captura"],
+      "preconditions": [
+        "Se facilita un esquema de campos (etiquetas, tipos, obligatoriedad) en `schema`"
+      ],
+      "postconditions": [
+        "`values` contiene los campos capturados una vez enviado",
+        "`submitted` solo pasa a true tras superar la validación en el cliente"
+      ],
+      "steps": [
+        { "label": "Renderizar los campos", "detail": "Construye los campos de entrada a partir del esquema (texto / número / desplegable / casilla)." },
+        { "label": "Validar", "detail": "Bloquea el envío hasta que los campos obligatorios estén presentes y los tipos sean válidos." },
+        { "label": "Emitir", "detail": "Al enviar, devuelve los valores recogidos y submitted=true." }
+      ]
+    },
+    "ui//table": {
+      "label": "Tabla / lista",
+      "description": "Muestra filas en una tabla ordenable y seleccionable a partir de una definición de columnas.",
+      "tags": ["tabla", "lista", "cuadrícula"],
+      "preconditions": [
+        "Las filas se facilitan en `rows`",
+        "Se facilita una definición de columnas en `columns`"
+      ],
+      "postconditions": [
+        "`selected` refleja la fila o filas que elige el usuario"
+      ],
+      "steps": [
+        { "label": "Definir las columnas", "detail": "Asocia cada columna a un campo de fila + un encabezado + un formateador opcional." },
+        { "label": "Renderizar las filas", "detail": "Muestra las filas; admite ordenación por columna y selección de filas." },
+        { "label": "Emitir la selección", "detail": "Devuelve la fila o filas seleccionadas cuando el usuario hace clic." }
+      ]
+    },
+    "ui//chart": {
+      "label": "Gráfico",
+      "description": "Visualiza una o varias series como gráfico de líneas, de barras o circular.",
+      "tags": ["gráfico", "visualización", "informe"],
+      "preconditions": [
+        "Los datos de la serie se facilitan en `series`"
+      ],
+      "postconditions": [
+        "El gráfico se dibuja según el `type` elegido"
+      ],
+      "steps": [
+        { "label": "Elegir un tipo de gráfico", "detail": "líneas para tendencias, barras para comparaciones, circular para composición." },
+        { "label": "Asignar los datos", "detail": "Asigna los puntos de la serie a los ejes / porciones." },
+        { "label": "Dibujar", "detail": "Dibuja el gráfico con etiquetas de eje + leyenda." }
+      ]
+    },
+    "ui//kpi-card": {
+      "label": "Tarjeta de KPI",
+      "description": "Muestra una única métrica destacada con una variación opcional respecto al periodo anterior.",
+      "tags": ["kpi", "métrica", "panel"],
+      "preconditions": [
+        "Se facilitan una etiqueta y un valor numérico"
+      ],
+      "postconditions": [
+        "Se muestran la métrica + la dirección de la variación"
+      ],
+      "steps": [
+        { "label": "Mostrar el valor", "detail": "Muestra la cifra destacada junto con la etiqueta." },
+        { "label": "Mostrar la variación", "detail": "Si se indica una variación, muestra subida/bajada con signo + color." }
+      ]
+    },
+    "ui//detail-view": {
+      "label": "Vista de detalle",
+      "description": "Muestra un único registro como un panel de detalle de etiqueta/valor en solo lectura.",
+      "tags": ["detalle", "registro", "solo lectura"],
+      "preconditions": [
+        "Se facilita un registro en `record`"
+      ],
+      "postconditions": [
+        "Los campos seleccionados se muestran como filas de etiqueta/valor"
+      ],
+      "steps": [
+        { "label": "Elegir los campos", "detail": "Usa `fields` para elegir + ordenar qué claves se muestran (por defecto: todas)." },
+        { "label": "Mostrar", "detail": "Muestra cada una como fila de etiqueta/valor; formatea fechas + números." }
+      ]
+    },
+    "ui//filter-bar": {
+      "label": "Barra de filtros",
+      "description": "Muestra un conjunto de controles de filtro y emite la consulta resultante a medida que el usuario los cambia.",
+      "tags": ["filtro", "búsqueda", "controles"],
+      "preconditions": [
+        "Se facilita una definición de los campos de filtro en `fields`"
+      ],
+      "postconditions": [
+        "`query` refleja las selecciones de filtro actuales",
+        "`changed` se dispara cada vez que cambia un control"
+      ],
+      "steps": [
+        { "label": "Renderizar los controles", "detail": "Construye un control por campo (texto / desplegable / rango de fechas)." },
+        { "label": "Recopilar", "detail": "Al cambiar, ensambla los filtros activos en un objeto de consulta." },
+        { "label": "Emitir", "detail": "Devuelve la consulta para que un bloque de datos posterior pueda recargar." }
+      ]
+    }
+  }
+}

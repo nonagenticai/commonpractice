@@ -1,0 +1,117 @@
+# Dependabot — the ONGOING half of dependency hygiene.
+#
+# WHY THIS FILE EXISTS. Before 2026-09-04 this repository had no dependency scanning of any kind:
+# the only workflows were `ci-cd.yaml` and `secret-scan.yml`, and gitleaks finds committed secrets,
+# not vulnerable packages. The first `bun audit` ever run here returned 34 backend and 15 frontend
+# advisories — including a SvelteKit ReDoS on the `Accept` header, unauthenticated and reachable on
+# every single production request. Nothing was wrong with the code; nobody had ever looked.
+#
+# ⇒ The `bun audit` steps added to ci-cd.yaml report the CURRENT state on every build.
+#   This file is the other half: it opens the PRs that change that state. One without the other is
+#   half a fix — a report nobody acts on, or updates nobody notices are needed.
+#
+# ⚠️ CORRECTED 2026-09-07 — this used to say "ecosystem is `npm`, NOT `bun`; `bun` is not a valid
+# value". That was WRONG and is exactly why it shipped as a defect: `package-ecosystem: npm` reads
+# package.json but does not understand `bun.lock`'s format, so it opened version-bump PRs that
+# changed package.json alone. `bun install --frozen-lockfile` (ci-cd.yaml) then failed EVERY one of
+# them with "lockfile had changes, but lockfile is frozen" — measured: 8/8 open PRs (#363-#369,
+# #373), 100%, structurally unmergeable, not flaky.
+#
+# Dependabot has had a DEDICATED `bun` package-ecosystem since dependabot-core PR #11209 (merged
+# 2025-01-15), for the text-based `bun.lock` format (Bun >=1.1.39; this repo pins `bun >=1.3.13` in
+# backend/package.json, well above that floor — legacy binary `bun.lockb` is NOT supported, but
+# nothing here uses it). Confirmed live 2026-09-07 against GitHub's own docs
+# (supported-ecosystems-and-repositories): YAML value `bun`, version updates supported, private
+# repos/registries supported. Security *updates* are NOT supported yet for this ecosystem (only
+# `npm`/`bun` version-bump PRs) — that gap is exactly what the blocking `bun audit --audit-level=high` steps in
+# ci-cd.yaml (added alongside this file) already cover; nothing here needs to duplicate it.
+#
+# So the fix is `package-ecosystem: bun`, not a lockfile-regeneration workflow: Dependabot itself
+# now runs `bun install` server-side and commits the real, correct `bun.lock` diff in the PR. No
+# sibling repo in this estate pairs bun with dependabot yet (checked `*/.github/dependabot.yml`
+# 2026-09-07), so there was no existing pattern to follow here — this is the first.
+#
+# ⚠️ TWO SEPARATE DIRECTORIES, DELIBERATELY. `backend/` and `frontend/` are independent workspaces
+# with their own package.json and their own lockfile; there is no root manifest tying them. A single
+# `/` entry would scan neither.
+#
+# ⚠️ CI here installs with `--frozen-lockfile` (ci-cd.yaml) and that must stay as-is: it is the
+# reason the tested tree equals the shipped tree. With the correct `bun` ecosystem, Dependabot PRs
+# now arrive with a matching lockfile and pass it; if a PR ever again fails this step, that is a
+# real signal (package.json and bun.lock disagree), not a config defect to route around.
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Security fixes arrive as their own PRs regardless of grouping, which is what we actually want
+    # to see quickly. Everything else is grouped so routine churn costs one review, not thirty —
+    # this repo's CI is a ~12 minute full suite per PR and the runner pool is shared estate-wide.
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+    # ⛔ TYPESCRIPT 7 IS BLOCKED ON THE ECOSYSTEM, NOT DEFERRED BY CHOICE. TS 7 is the native (Go)
+    # port and its npm package deliberately does not ship the JS compiler API. Measured against the
+    # published package, not the release notes: `npm view typescript@7.0.2 exports` is
+    # `{".": "./lib/version.cjs", "./unstable/ast": …}` — the MAIN ENTRY IS A VERSION STUB — plus
+    # platform binaries `@typescript/typescript-{linux-x64,darwin-arm64,…}`. The real API lives only
+    # under `typescript/unstable/*`, and that subpath name is the maintainers' own warning.
+    #
+    # Two blockers, only one of them ours:
+    #   1. `backend/scripts/check-hook-timeouts.ts` walks the AST with the classic `ts.*` API, so it
+    #      fails as `Namespace '…/typescript/lib/version' has no exported member 'ArrowFunction'`.
+    #      Portable, but only onto an API explicitly labelled unstable.
+    #   2. `svelte-check` CANNOT START: `TypeError: Cannot read properties of undefined (reading
+    #      'useCaseSensitiveFileNames')` at svelte-check/dist/src/index.js:14972 — i.e. `ts.sys` is
+    #      undefined. Upstream's to fix; nothing here can work around it.
+    #
+    # ⚠️ THIS BELONGS IN THE FILE, NOT IN AN `@dependabot ignore` COMMENT. That command was refused
+    # ("only users with push access can use that command"), and even where it works it records the
+    # decision in a PR that gets deleted, with no reasoning a future reader can find. Delete this
+    # block to re-propose TS 7 — that is the `unignore`, and it is reviewable.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+    labels: [dependencies, backend]
+  - package-ecosystem: bun
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+    # Same block as the backend entry above, and for the same two reasons — svelte-check lives here,
+    # so this side is the harder blocked half.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+    labels: [dependencies, frontend]
+  # The workflows themselves pin third-party actions; those get stale in exactly the same way and
+  # are a supply-chain surface of their own.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    # ⛔ THE PRIVATE CROSS-REPO ACTION IS UNREACHABLE TO DEPENDABOT, AND THAT IS NOT FIXABLE HERE.
+    # Two workflows `uses:` an action that lives in another PRIVATE repo:
+    # Dependabot's job token is scoped to THIS repo only, so resolving them 401s on git-upload-pack
+    # and the whole update run aborts:
+    #   `##[error]Dependabot encountered an error performing the update`  (run 34133773156)
+    #
+    # ⚠️ MEASURE THIS ECOSYSTEM, NOT THE WORKFLOW. A first read of `gh run list --limit 15` said
+    # "1 of 15 failed, looks like a one-off" — WRONG, because that denominator mixes in the two
+    # `bun` ecosystems, which are green. Scoped to `github-actions` alone the rate is 5/5 since
+    # 2026-09-04: 100%, every run, since the entry was added. It has never once succeeded.
+    #
+    # Ignoring loses nothing: both refs are pinned to `@main`, so there is no version for Dependabot
+    # to bump even if it could read them. The alternative — a `registries:` entry plus a PAT with
+    # and adds a credential to rotate. If that action is ever pinned to a tag, revisit this.
+    #
+    # Delete this block to re-propose; that is the `unignore`, and it is reviewable — same reasoning
+    # as the typescript blocks above.
+    ignore:
+    labels: [dependencies, ci]

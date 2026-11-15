@@ -1,0 +1,179 @@
+{
+  "category": "ai",
+  "templates": [
+    {
+      "name": "extract-fields",
+      "label": "Extract fields",
+      "description": "Pull a structured set of fields out of free text using the brokered LLM (ctx.llm).",
+      "tags": ["extraction", "structured", "nlp"],
+      "preconditions": [
+        "Source text is provided on `text`",
+        "A target field schema is provided on `schema`"
+      ],
+      "postconditions": [
+        "`fields` is an object keyed by the schema fields",
+        "Missing fields are null rather than invented"
+      ],
+      "steps": [
+        { "label": "Build the prompt", "detail": "Instruct the model to return ONLY JSON matching the schema; list each field + type." },
+        { "label": "Call the model", "detail": "Use ctx.llm() with the text; request strict JSON output." },
+        { "label": "Parse + guard", "detail": "Parse the JSON; coerce types; null out anything not found (never hallucinate)." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "text": { "type": "string", "required": true },
+          "schema": { "type": "json", "required": true, "description": "Target fields: [{ name, type }]" }
+        },
+        "outputs": {
+          "fields": { "type": "json" }
+        },
+        "capabilities": { "llm": true }
+      }
+    },
+    {
+      "name": "classify",
+      "label": "Classify",
+      "description": "Assign the best label from a fixed set to the input text, with a confidence score.",
+      "tags": ["classification", "labeling", "nlp"],
+      "preconditions": [
+        "Input text is on `text`",
+        "A closed label set is on `labels`"
+      ],
+      "postconditions": [
+        "`label` is one of the provided labels (or an explicit `unknown`)",
+        "`confidence` is between 0 and 1"
+      ],
+      "steps": [
+        { "label": "Constrain the choices", "detail": "Prompt the model to pick exactly one label from the provided set." },
+        { "label": "Call the model", "detail": "Use ctx.llm(); ask for { label, confidence } as JSON." },
+        { "label": "Validate", "detail": "Reject any label outside the set; default to unknown with low confidence." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "text": { "type": "string", "required": true },
+          "labels": { "type": "string[]", "required": true }
+        },
+        "outputs": {
+          "label": { "type": "string" },
+          "confidence": { "type": "number" }
+        },
+        "capabilities": { "llm": true }
+      }
+    },
+    {
+      "name": "summarize",
+      "label": "Summarize",
+      "description": "Produce a length- and tone-controlled summary of the input text.",
+      "tags": ["summarization", "nlp"],
+      "preconditions": [
+        "Input text is on `text`"
+      ],
+      "postconditions": [
+        "`summary` respects the requested max length + tone"
+      ],
+      "steps": [
+        { "label": "Set constraints", "detail": "Encode max_lines + tone into the system instruction." },
+        { "label": "Call the model", "detail": "Use ctx.llm() with the text and constraints." },
+        { "label": "Trim", "detail": "Enforce the line cap defensively after the model returns." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "text": { "type": "string", "required": true },
+          "max_lines": { "type": "number" },
+          "tone": { "type": "enum", "enum": ["neutral", "formal", "friendly"] }
+        },
+        "outputs": {
+          "summary": { "type": "string" }
+        },
+        "capabilities": { "llm": true }
+      }
+    },
+    {
+      "name": "generate-draft",
+      "label": "Generate draft",
+      "description": "Draft content from a short brief in a chosen tone (email, reply, description, …).",
+      "tags": ["generation", "drafting", "nlp"],
+      "preconditions": [
+        "A brief is provided on `brief`"
+      ],
+      "postconditions": [
+        "`draft` is a ready-to-edit first draft in the requested tone"
+      ],
+      "steps": [
+        { "label": "Frame the task", "detail": "Tell the model the audience, purpose, and tone." },
+        { "label": "Call the model", "detail": "Use ctx.llm() with the brief; keep it editable, not final." },
+        { "label": "Return", "detail": "Return the draft text for a human to review + send." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "brief": { "type": "string", "required": true },
+          "tone": { "type": "enum", "enum": ["neutral", "formal", "friendly"] }
+        },
+        "outputs": {
+          "draft": { "type": "string" }
+        },
+        "capabilities": { "llm": true }
+      }
+    },
+    {
+      "name": "route-by-intent",
+      "label": "Route by intent",
+      "description": "Detect the user's intent from a message and route to one of a fixed set of handlers.",
+      "tags": ["intent", "routing", "nlp"],
+      "preconditions": [
+        "A message is on `message`",
+        "A set of candidate intents is on `intents`"
+      ],
+      "postconditions": [
+        "`intent` is one of the candidates (or `fallback`)",
+        "`confidence` is between 0 and 1"
+      ],
+      "steps": [
+        { "label": "Describe intents", "detail": "Give the model a one-line description per candidate intent." },
+        { "label": "Call the model", "detail": "Use ctx.llm(); ask for { intent, confidence } as JSON." },
+        { "label": "Gate", "detail": "Below a confidence threshold, route to fallback instead of guessing." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "message": { "type": "string", "required": true },
+          "intents": { "type": "string[]", "required": true }
+        },
+        "outputs": {
+          "intent": { "type": "string" },
+          "confidence": { "type": "number" }
+        },
+        "capabilities": { "llm": true }
+      }
+    },
+    {
+      "name": "redact-pii",
+      "label": "Redact PII",
+      "description": "Detect and mask personal data (names, emails, phones, IDs) in free text.",
+      "tags": ["pii", "redaction", "privacy"],
+      "preconditions": [
+        "Input text is on `text`",
+        "The PII kinds to redact are on `kinds`"
+      ],
+      "postconditions": [
+        "`redacted` replaces each detected span with a typed placeholder",
+        "`found` lists what was detected (type + count), never the raw values"
+      ],
+      "steps": [
+        { "label": "Specify kinds", "detail": "Tell the model which PII kinds to look for (email, phone, name, id)." },
+        { "label": "Call the model", "detail": "Use ctx.llm(); ask for spans to mask, not the raw values back." },
+        { "label": "Mask", "detail": "Replace each span with [REDACTED:<kind>]; tally counts in `found`." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "text": { "type": "string", "required": true },
+          "kinds": { "type": "string[]", "description": "PII kinds: email, phone, name, id" }
+        },
+        "outputs": {
+          "redacted": { "type": "string" },
+          "found": { "type": "json" }
+        },
+        "capabilities": { "llm": true }
+      }
+    }
+  ]
+}

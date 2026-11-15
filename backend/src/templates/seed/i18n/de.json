@@ -1,0 +1,350 @@
+{
+  "locale": "de",
+  "templates": {
+    "ai//extract-fields": {
+      "label": "Felder extrahieren",
+      "description": "Extrahiert einen strukturierten Satz von Feldern aus Freitext mithilfe des verwalteten Sprachmodells (ctx.llm).",
+      "tags": ["Extraktion", "strukturiert", "NLP"],
+      "preconditions": [
+        "Der Quelltext liegt auf `text` vor",
+        "Ein Zielfeldschema liegt auf `schema` vor"
+      ],
+      "postconditions": [
+        "`fields` ist ein Objekt mit den Schemafeldern als Schlüssel",
+        "Fehlende Felder sind null statt erfunden"
+      ],
+      "steps": [
+        { "label": "Prompt erstellen", "detail": "Weise das Modell an, AUSSCHLIESSLICH JSON gemäß dem Schema zurückzugeben; nenne jedes Feld + den Typ." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm() mit dem Text; fordere strikte JSON-Ausgabe an." },
+        { "label": "Parsen + absichern", "detail": "Parse das JSON; erzwinge die Typen; setze alles Nichtgefundene auf null (niemals halluzinieren)." }
+      ]
+    },
+    "ai//classify": {
+      "label": "Klassifizieren",
+      "description": "Ordnet dem Eingabetext das am besten passende Label aus einer festen Menge zu, mit einem Konfidenzwert.",
+      "tags": ["Klassifikation", "Kennzeichnung", "NLP"],
+      "preconditions": [
+        "Der Eingabetext liegt auf `text` vor",
+        "Eine geschlossene Labelmenge liegt auf `labels` vor"
+      ],
+      "postconditions": [
+        "`label` ist eines der vorgegebenen Labels (oder ein explizites `unknown`)",
+        "`confidence` liegt zwischen 0 und 1"
+      ],
+      "steps": [
+        { "label": "Auswahl einschränken", "detail": "Fordere das Modell auf, genau ein Label aus der vorgegebenen Menge zu wählen." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm(); fordere { label, confidence } als JSON an." },
+        { "label": "Validieren", "detail": "Weise jedes Label außerhalb der Menge zurück; falle auf unknown mit niedriger Konfidenz zurück." }
+      ]
+    },
+    "ai//summarize": {
+      "label": "Zusammenfassen",
+      "description": "Erstellt eine Zusammenfassung des Eingabetexts mit gesteuerter Länge und Tonalität.",
+      "tags": ["Zusammenfassung", "NLP"],
+      "preconditions": [
+        "Der Eingabetext liegt auf `text` vor"
+      ],
+      "postconditions": [
+        "`summary` hält die geforderte Maximallänge + Tonalität ein"
+      ],
+      "steps": [
+        { "label": "Vorgaben setzen", "detail": "Kodiere max_lines + Tonalität in der Systemanweisung." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm() mit dem Text und den Vorgaben." },
+        { "label": "Kürzen", "detail": "Erzwinge das Zeilenlimit defensiv, nachdem das Modell geantwortet hat." }
+      ]
+    },
+    "ai//generate-draft": {
+      "label": "Entwurf erstellen",
+      "description": "Erstellt aus einem kurzen Briefing einen Text in der gewählten Tonalität (E-Mail, Antwort, Beschreibung, …).",
+      "tags": ["Generierung", "Entwurf", "NLP"],
+      "preconditions": [
+        "Ein Briefing liegt auf `brief` vor"
+      ],
+      "postconditions": [
+        "`draft` ist ein sofort bearbeitbarer erster Entwurf in der geforderten Tonalität"
+      ],
+      "steps": [
+        { "label": "Aufgabe rahmen", "detail": "Nenne dem Modell Zielgruppe, Zweck und Tonalität." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm() mit dem Briefing; halte es bearbeitbar, nicht endgültig." },
+        { "label": "Zurückgeben", "detail": "Gib den Entwurfstext zurück, damit ein Mensch ihn prüfen + versenden kann." }
+      ]
+    },
+    "ai//route-by-intent": {
+      "label": "Nach Absicht weiterleiten",
+      "description": "Erkennt die Absicht des Nutzers in einer Nachricht und leitet an einen aus einer festen Menge von Handlern weiter.",
+      "tags": ["Absicht", "Weiterleitung", "NLP"],
+      "preconditions": [
+        "Eine Nachricht liegt auf `message` vor",
+        "Eine Menge möglicher Absichten liegt auf `intents` vor"
+      ],
+      "postconditions": [
+        "`intent` ist eine der vorgegebenen Absichten (oder `fallback`)",
+        "`confidence` liegt zwischen 0 und 1"
+      ],
+      "steps": [
+        { "label": "Absichten beschreiben", "detail": "Gib dem Modell je eine einzeilige Beschreibung pro möglicher Absicht." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm(); fordere { intent, confidence } als JSON an." },
+        { "label": "Absichern", "detail": "Leite unterhalb einer Konfidenzschwelle an fallback weiter, statt zu raten." }
+      ]
+    },
+    "ai//redact-pii": {
+      "label": "Personenbezogene Daten schwärzen",
+      "description": "Erkennt personenbezogene Daten (Namen, E-Mail-Adressen, Telefonnummern, Kennnummern) in Freitext und maskiert sie.",
+      "tags": ["Personendaten", "Schwärzung", "Datenschutz"],
+      "preconditions": [
+        "Der Eingabetext liegt auf `text` vor",
+        "Die zu schwärzenden Arten personenbezogener Daten liegen auf `kinds` vor"
+      ],
+      "postconditions": [
+        "`redacted` ersetzt jede gefundene Textstelle durch einen typisierten Platzhalter",
+        "`found` listet auf, was erkannt wurde (Art + Anzahl), niemals die Rohwerte"
+      ],
+      "steps": [
+        { "label": "Arten festlegen", "detail": "Nenne dem Modell die zu suchenden Arten personenbezogener Daten (E-Mail, Telefon, Name, ID)." },
+        { "label": "Modell aufrufen", "detail": "Verwende ctx.llm(); fordere die zu maskierenden Textstellen an, nicht die Rohwerte zurück." },
+        { "label": "Maskieren", "detail": "Ersetze jede Textstelle durch [REDACTED:<kind>]; zähle die Treffer in `found`." }
+      ]
+    },
+    "logic//validate-record": {
+      "label": "Datensatz validieren",
+      "description": "Prüft einen Datensatz gegen ein Feldregelwerk; gültige Datensätze passieren, bei ungültigen werden die Gründe gesammelt.",
+      "tags": ["Validierung", "Absicherung", "Datenqualität"],
+      "preconditions": [
+        "Ein Datensatzobjekt liegt am Eingang `record` vor",
+        "Ein Feldregelwerk (Pflicht / Typ / Wertebereich) ist definiert"
+      ],
+      "postconditions": [
+        "`valid` ist nur dann true, wenn jede Regel erfüllt ist",
+        "`errors` enthält pro fehlgeschlagener Regel einen lesbaren Grund"
+      ],
+      "steps": [
+        { "label": "Regelwerk laden", "detail": "Lies die Regeln je Feld aus dem Eingang `rules` (Pflicht, Typ, Min/Max, Muster)." },
+        { "label": "Jedes Feld prüfen", "detail": "Lies zu jeder Regel record[field] und prüfe es; hänge bei einem Fehler eine Meldung an errors an." },
+        { "label": "Entscheiden", "detail": "valid = errors.length === 0; gib beides zurück, damit nachgelagert verzweigt werden kann." }
+      ]
+    },
+    "logic//route-by-rule": {
+      "label": "Nach Regel weiterleiten (Entscheidungstabelle)",
+      "description": "Wählt einen Zweig, indem eine geordnete Entscheidungstabelle auf die Eingabe angewendet wird — der erste Treffer gewinnt.",
+      "tags": ["Weiterleitung", "Entscheidungstabelle", "Verzweigung"],
+      "preconditions": [
+        "Ein Eingabeobjekt liegt auf `item` vor",
+        "Eine geordnete Liste von Regeln (Bedingung → Route) ist definiert"
+      ],
+      "postconditions": [
+        "`route` ist das Label der ersten passenden Regel oder die Standardroute",
+        "`matched` zeigt an, ob überhaupt eine Regel gegriffen hat"
+      ],
+      "steps": [
+        { "label": "Entscheidungstabelle lesen", "detail": "Jede Regel lautet { when: {field, op, value}, route }; werte von oben nach unten aus." },
+        { "label": "Ersten Treffer finden", "detail": "Gib die Route der ersten Regel zurück, deren Bedingung für `item` gilt." },
+        { "label": "Zurückfallen", "detail": "Passt keine Regel, gib die konfigurierte Standardroute zurück und matched=false." }
+      ]
+    },
+    "logic//approve-reject": {
+      "label": "Genehmigen / ablehnen (Vier-Augen-Prinzip)",
+      "description": "Entscheidet über einen Vorgang anhand einer Richtlinie und einer ausdrücklichen menschlichen Entscheidung und hält fest, wer entschieden hat und warum.",
+      "tags": ["Genehmigung", "Vier-Augen-Prinzip", "Governance"],
+      "preconditions": [
+        "Der zu prüfende Vorgang liegt auf `item` vor",
+        "Eine Entscheidung (`approve` | `reject`) und die Identität der prüfenden Person liegen vor"
+      ],
+      "postconditions": [
+        "`approved` spiegelt die Entscheidung der prüfenden Person nach den Richtlinienprüfungen wider",
+        "Ein Audit-Trail (Prüfer, Grund, Zeitstempel) ist angehängt"
+      ],
+      "steps": [
+        { "label": "Richtlinienprüfungen vorschalten", "detail": "Führe zuerst die automatischen Prüfungen aus; lehne alles, was die Richtlinie nicht besteht, unabhängig von der menschlichen Eingabe automatisch ab." },
+        { "label": "Menschliche Entscheidung festhalten", "detail": "Erfasse Entscheidung, Prüfer und Grund für den Audit-Trail." },
+        { "label": "Ergebnis ausgeben", "detail": "approved = policyPassed && decision === 'approve'; füge den Entscheidungsdatensatz bei." }
+      ]
+    },
+    "logic//dedupe": {
+      "label": "Duplikate entfernen",
+      "description": "Fasst Zeilen mit gleichem Schlüssel zusammen, behält eine ausgewählte Zeile und zählt die entfernten Duplikate.",
+      "tags": ["Duplikate", "Bereinigung", "Datenqualität"],
+      "preconditions": [
+        "Eine Liste von Zeilen liegt auf `rows` vor",
+        "Ein Dublettenschlüssel (ein oder mehrere Felder) ist konfiguriert"
+      ],
+      "postconditions": [
+        "`rows` enthält höchstens eine verbleibende Zeile je Schlüssel",
+        "`removed` zählt, wie viele Duplikate entfernt wurden"
+      ],
+      "steps": [
+        { "label": "Schlüssel bilden", "detail": "Berechne je Zeile einen zusammengesetzten Schlüssel aus den konfigurierten Schlüsselfeldern." },
+        { "label": "Verbleibende Zeile wählen", "detail": "Behalte je Schlüssel die erste Zeile (oder die neueste laut `tiebreak`); verwirf den Rest." },
+        { "label": "Berichten", "detail": "Gib die bereinigten Zeilen und die Anzahl der entfernten zurück." }
+      ]
+    },
+    "logic//enrich-lookup": {
+      "label": "Über Nachschlagetabelle anreichern",
+      "description": "Verknüpft jede Zeile über einen Schlüssel mit einer Referenztabelle und übernimmt die gefundenen Referenzfelder.",
+      "tags": ["Anreicherung", "Verknüpfung", "Nachschlagen"],
+      "preconditions": [
+        "Die anzureichernden Zeilen liegen auf `rows` vor",
+        "Ein Referenzdatensatz bzw. eine Referenztabelle und der Verknüpfungsschlüssel sind vorhanden"
+      ],
+      "postconditions": [
+        "Jede Zeile erhält bei einem Treffer die Referenzfelder hinzu",
+        "`unmatched` zählt die Zeilen ohne Referenztreffer"
+      ],
+      "steps": [
+        { "label": "Referenz indizieren", "detail": "Baue eine Map vom Verknüpfungsschlüssel auf die Referenzzeile für Zugriffe in O(1)." },
+        { "label": "Zusammenführen", "detail": "Schlage je Eingabezeile über den Schlüssel nach und übernimm die Referenzfelder (bei Konflikten gewinnt die Eingabe)." },
+        { "label": "Fehltreffer erfassen", "detail": "Zähle die Zeilen ohne Treffer, damit die Qualität überwacht werden kann." }
+      ]
+    },
+    "logic//threshold-flag": {
+      "label": "Nach Schwellenwert markieren",
+      "description": "Bewertet jeden Eintrag und markiert diejenigen zur Prüfung, die einen konfigurierbaren Schwellenwert überschreiten.",
+      "tags": ["Bewertung", "Markierung", "Überwachung"],
+      "preconditions": [
+        "Die zu bewertenden Einträge liegen auf `items` vor",
+        "Ein numerisches Feld und ein Schwellenwert sind konfiguriert"
+      ],
+      "postconditions": [
+        "`flagged` listet die Einträge auf, die den Schwellenwert überschreiten",
+        "`count` ist die Anzahl der markierten Einträge"
+      ],
+      "steps": [
+        { "label": "Kennzahl lesen", "detail": "Lies das numerische Feld aus jedem Eintrag." },
+        { "label": "Vergleichen", "detail": "Markiere Einträge, bei denen value >= threshold gilt (oder <= bei Untergrenzen)." },
+        { "label": "Sammeln", "detail": "Gib die markierte Teilmenge und ihre Anzahl zurück." }
+      ]
+    },
+    "logic//map-transform": {
+      "label": "Zuordnen / transformieren",
+      "description": "Formt jede Zeile über eine Feldzuordnung auf ein Zielschema um und verwirft oder benennt Felder wie konfiguriert.",
+      "tags": ["Transformation", "Zuordnung", "Umformung"],
+      "preconditions": [
+        "Die Quellzeilen liegen auf `rows` vor",
+        "Eine Feldzuordnung (Quelle → Ziel) ist konfiguriert"
+      ],
+      "postconditions": [
+        "Jede Ausgabezeile enthält nur die zugeordneten Zielfelder",
+        "Die Zeilenreihenfolge bleibt erhalten"
+      ],
+      "steps": [
+        { "label": "Zuordnung lesen", "detail": "Die Zuordnung lautet { targetField: sourceField }." },
+        { "label": "Jede Zeile projizieren", "detail": "Baue je Zeile ein neues Objekt anhand der Zuordnung; überspringe nicht zugeordnete Felder." },
+        { "label": "Zurückgeben", "detail": "Gib die transformierten Zeilen in der ursprünglichen Reihenfolge aus." }
+      ]
+    },
+    "logic//aggregate": {
+      "label": "Aggregieren / gruppieren",
+      "description": "Gruppiert Zeilen nach einem Schlüssel und berechnet je Gruppe Aggregate (Anzahl / Summe / Mittelwert).",
+      "tags": ["Aggregation", "Gruppierung", "Übersicht"],
+      "preconditions": [
+        "Die Zeilen liegen auf `rows` vor",
+        "Ein Gruppierungsschlüssel und die zu aggregierenden Kennzahlen sind konfiguriert"
+      ],
+      "postconditions": [
+        "`groups` enthält je eindeutigem Schlüssel eine Ergebniszeile",
+        "Jede Ergebniszeile trägt die angeforderten Aggregate"
+      ],
+      "steps": [
+        { "label": "Einteilen", "detail": "Gruppiere die Zeilen nach dem konfigurierten Feld group_by." },
+        { "label": "Verdichten", "detail": "Berechne je Gruppe die Anzahl sowie Summe/Mittelwert jedes Kennzahlenfelds." },
+        { "label": "Ausgeben", "detail": "Gib je Gruppe eine Zeile mit den Aggregaten zurück." }
+      ]
+    },
+    "ui//form": {
+      "label": "Formular",
+      "description": "Erfasst und validiert Nutzereingaben gegen ein Feldschema und gibt die erfassten Werte beim Absenden aus.",
+      "tags": ["Formular", "Eingabe", "Erfassung"],
+      "preconditions": [
+        "Ein Feldschema (Labels, Typen, Pflichtfelder) liegt auf `schema` vor"
+      ],
+      "postconditions": [
+        "`values` enthält die erfassten Felder, sobald abgesendet wurde",
+        "`submitted` wird erst true, wenn die clientseitige Validierung besteht"
+      ],
+      "steps": [
+        { "label": "Felder rendern", "detail": "Baue die Eingabefelder aus dem Schema (Text / Zahl / Auswahl / Kontrollkästchen)." },
+        { "label": "Validieren", "detail": "Sperre das Absenden, bis alle Pflichtfelder gefüllt und die Typen gültig sind." },
+        { "label": "Ausgeben", "detail": "Gib beim Absenden die gesammelten Werte zurück sowie submitted=true." }
+      ]
+    },
+    "ui//table": {
+      "label": "Tabelle / Liste",
+      "description": "Stellt Zeilen anhand einer Spaltendefinition in einer sortier- und auswählbaren Tabelle dar.",
+      "tags": ["Tabelle", "Liste", "Raster"],
+      "preconditions": [
+        "Die Zeilen liegen auf `rows` vor",
+        "Eine Spaltendefinition liegt auf `columns` vor"
+      ],
+      "postconditions": [
+        "`selected` spiegelt die vom Nutzer gewählte(n) Zeile(n) wider"
+      ],
+      "steps": [
+        { "label": "Spalten definieren", "detail": "Ordne jeder Spalte ein Zeilenfeld + eine Überschrift + optional einen Formatierer zu." },
+        { "label": "Zeilen rendern", "detail": "Stelle die Zeilen dar; unterstütze Sortierung nach Spalte und Zeilenauswahl." },
+        { "label": "Auswahl ausgeben", "detail": "Gib die ausgewählte(n) Zeile(n) zurück, sobald der Nutzer klickt." }
+      ]
+    },
+    "ui//chart": {
+      "label": "Diagramm",
+      "description": "Visualisiert eine oder mehrere Datenreihen als Linien-, Balken- oder Kreisdiagramm.",
+      "tags": ["Diagramm", "Visualisierung", "Bericht"],
+      "preconditions": [
+        "Die Reihendaten liegen auf `series` vor"
+      ],
+      "postconditions": [
+        "Das Diagramm wird für den gewählten `type` gezeichnet"
+      ],
+      "steps": [
+        { "label": "Diagrammtyp wählen", "detail": "Linie für Trends, Balken für Vergleiche, Kreis für Anteile." },
+        { "label": "Daten zuordnen", "detail": "Ordne die Punkte der Datenreihe den Achsen / Segmenten zu." },
+        { "label": "Zeichnen", "detail": "Zeichne das Diagramm mit Achsenbeschriftungen + Legende." }
+      ]
+    },
+    "ui//kpi-card": {
+      "label": "KPI-Karte",
+      "description": "Zeigt eine einzelne Kennzahl mit optionaler Veränderung gegenüber einer Vorperiode.",
+      "tags": ["KPI", "Kennzahl", "Dashboard"],
+      "preconditions": [
+        "Ein Label und ein numerischer Wert liegen vor"
+      ],
+      "postconditions": [
+        "Die Kennzahl + die Richtung der Veränderung werden dargestellt"
+      ],
+      "steps": [
+        { "label": "Wert anzeigen", "detail": "Stelle die Kennzahl zusammen mit dem Label dar." },
+        { "label": "Veränderung anzeigen", "detail": "Ist eine Veränderung angegeben, zeige auf/ab mit Vorzeichen + Farbe." }
+      ]
+    },
+    "ui//detail-view": {
+      "label": "Detailansicht",
+      "description": "Stellt einen einzelnen Datensatz als schreibgeschütztes Detailfeld mit Label/Wert-Zeilen dar.",
+      "tags": ["Detail", "Datensatz", "schreibgeschützt"],
+      "preconditions": [
+        "Ein Datensatz liegt auf `record` vor"
+      ],
+      "postconditions": [
+        "Die gewählten Felder werden als Label/Wert-Zeilen dargestellt"
+      ],
+      "steps": [
+        { "label": "Felder wählen", "detail": "Nutze `fields`, um zu wählen + zu ordnen, welche Schlüssel angezeigt werden (Standard: alle)." },
+        { "label": "Darstellen", "detail": "Stelle jedes als Label/Wert-Zeile dar; formatiere Datumsangaben + Zahlen." }
+      ]
+    },
+    "ui//filter-bar": {
+      "label": "Filterleiste",
+      "description": "Stellt eine Reihe von Filtern dar und gibt die daraus entstehende Abfrage aus, sobald der Nutzer sie ändert.",
+      "tags": ["Filter", "Suche", "Bedienelemente"],
+      "preconditions": [
+        "Eine Definition der Filterfelder liegt auf `fields` vor"
+      ],
+      "postconditions": [
+        "`query` spiegelt die aktuellen Filterauswahlen wider",
+        "`changed` löst aus, sobald sich ein Bedienelement ändert"
+      ],
+      "steps": [
+        { "label": "Bedienelemente rendern", "detail": "Baue je Feld ein Bedienelement (Text / Auswahl / Datumsbereich)." },
+        { "label": "Sammeln", "detail": "Setze bei jeder Änderung die aktiven Filter zu einem Abfrageobjekt zusammen." },
+        { "label": "Ausgeben", "detail": "Gib die Abfrage zurück, damit ein nachgelagerter Datenblock neu laden kann." }
+      ]
+    }
+  }
+}

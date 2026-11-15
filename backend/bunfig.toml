@@ -1,0 +1,8 @@
+# NOTE: bun 1.3.14 SILENTLY IGNORES the `timeout` below — for tests AND for hooks. It is kept only
+# to document intent. The value that actually applies is the `--timeout` flag on the `test` script in
+# package.json, so run the suite as `bun run test` (CI does). A bare `bun test` gets bun's hard 5 s
+# default, which makes slow-but-correct cases (anything shelling out to tsc, or re-running a seed)
+# fail as `timed out after 5000ms` with zero assertion failures — a regression that isn't one.
+[test]
+timeout = 30000
+preload = ["./tests/setup-env.ts", "./tests/setup.ts"]

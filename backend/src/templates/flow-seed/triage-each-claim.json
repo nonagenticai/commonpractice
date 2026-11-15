@@ -1,0 +1,111 @@
+{
+  "seed_key": "triage-each-claim",
+  "category": "claims",
+  "name": "Triage each claim",
+  "description": "Rates every claim in a list for urgency and shows the results in a table.",
+  "i18n": {
+    "nl": {
+      "name": "Elke schadeclaim beoordelen",
+      "description": "Beoordeelt elke claim in een lijst op urgentie en toont de uitkomsten in een tabel."
+    },
+    "de": {
+      "name": "Jeden Schadenfall einstufen",
+      "description": "Stuft jeden Schadenfall einer Liste nach Dringlichkeit ein und zeigt die Ergebnisse in einer Tabelle."
+    },
+    "fr": {
+      "name": "Prioriser chaque sinistre",
+      "description": "Évalue l’urgence de chaque sinistre d’une liste et affiche les résultats dans un tableau."
+    },
+    "es": {
+      "name": "Priorizar cada siniestro",
+      "description": "Valora la urgencia de cada siniestro de una lista y muestra los resultados en una tabla."
+    },
+    "pl": {
+      "name": "Ocena każdej szkody",
+      "description": "Ocenia pilność każdej szkody z listy i pokazuje wyniki w tabeli."
+    },
+    "ar": {
+      "name": "فرز كل مطالبة",
+      "description": "يقيّم مدى إلحاح كل مطالبة في القائمة ويعرض النتائج في جدول."
+    },
+    "he": {
+      "name": "מיון כל תביעה",
+      "description": "מדרג את הדחיפות של כל תביעה ברשימה ומציג את התוצאות בטבלה."
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "n1",
+        "slug": "example-claim-data",
+        "category": "data",
+        "config": {},
+        "position": {
+          "x": 80,
+          "y": 180
+        }
+      },
+      {
+        "id": "fe1",
+        "slug": "foreach",
+        "category": "logic",
+        "config": {},
+        "position": {
+          "x": 360,
+          "y": 100
+        },
+        "kind": "foreach",
+        "loop": {
+          "rowsInput": "in",
+          "maxIterations": 100
+        }
+      },
+      {
+        "id": "n2",
+        "slug": "triage-claim",
+        "category": "ai",
+        "config": {},
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "parentId": "fe1"
+      },
+      {
+        "id": "n3",
+        "slug": "table-view",
+        "category": "ui",
+        "config": {
+          "title": "Claim triage"
+        },
+        "position": {
+          "x": 820,
+          "y": 180
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n1",
+        "sourceHandle": "rows",
+        "target": "fe1",
+        "targetHandle": "in"
+      },
+      {
+        "id": "e2",
+        "source": "fe1",
+        "sourceHandle": "item",
+        "target": "n2",
+        "targetHandle": "claim"
+      },
+      {
+        "id": "e3",
+        "source": "fe1",
+        "sourceHandle": "results",
+        "target": "n3",
+        "targetHandle": "rows"
+      }
+    ]
+  }
+}

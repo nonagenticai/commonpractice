@@ -1,0 +1,86 @@
+-- 0058 — EXPAND half of an expand/contract: give usage_counters a tenant-aligned natural key.
+--
+-- THE BUG (empirically confirmed against the live dev DB and measured in prod)
+-- ---------------------------------------------------------------------------
+-- `usage_counters` has carried a tenant_id since 0028 (NOT NULL since 0029, with a STRICT
+-- RLS policy `tenant_id = app_current_tenant_uuid()`), but its natural key is still the
+-- pre-tenancy `UNIQUE (user_id, day)` from 0004_runs.sql. The two disagree, and the
+-- disagreement silently DISABLES the daily call cap and the weekly spend ceiling.
+--
+-- host/llm-broker.ts reserveCall() does:
+--     INSERT INTO usage_counters (user_id, day) VALUES (…, current_date)
+--       ON CONFLICT (user_id, day) DO NOTHING;
+--     SELECT llm_calls, spend_usd … WHERE user_id = … AND day = current_date FOR UPDATE;
+--     -- falls back to { llm_calls: 0, spend_usd: '0' } when that returns no row
+--     UPDATE usage_counters SET llm_calls = llm_calls + 1 … WHERE user_id = … AND day = …;
+--
+-- When today's row belongs to a DIFFERENT tenant than the request GUC, RLS hides it, so:
+--   * the INSERT conflicts on the invisible row and DOES NOTHING (verified: `INSERT 0 0`,
+--     no error — an *absent* GUC errors loudly, a *mismatched* one is silent),
+--   * the SELECT … FOR UPDATE returns 0 rows and the code falls back to a zero counter,
+--   * the UPDATE matches 0 rows (verified: `UPDATE 0`).
+-- Every cap check then passes, for the rest of the UTC day, on every call. Verified
+-- non-self-healing over repeated iterations. Line 636 of llm-broker.ts is the ONLY
+-- daily-cap enforcement point in the backend, and both the streaming and non-streaming
+-- paths go through it.
+--
+-- REACHABILITY — this is the normal admin workflow, not an edge case.
+-- A super_admin's `X-Active-Tenant-Id` scope-switch is honoured by middleware/tenant.ts and
+-- attached by the frontend to EVERY request, so one LLM call at home stamps the day's row
+-- with the home tenant and every subsequent call under any other scoped tenant that day is
+-- uncapped and unmetered on the cap ledger.
+--
+-- ON THE PROD NUMBERS — stated as what they are, not as more than they are.
+-- A prod query on 2026-08-05 found 308 of 505 usage_counters rows (61%) whose tenant_id
+-- differs from the owning user's `users.tenant_id`. That is an UPPER BOUND on exposure and a
+-- weak proxy, NOT a measurement of impact: this repo's own operating notes record
+-- `users.tenant_id` as a stale artefact that must not be trusted for showcase-seeded
+-- identities (the demo tenant's members carry a home tenant that does not reflect the tenant
+-- their JWT actually asserts), and the figure counts rows, not bypassed calls. Treat it as
+-- "the disagreement is widespread", nothing sharper. The BUG itself is proven by the
+-- reproduction above, which does not depend on this number at all.
+-- (No row shows two tenants for one user+day. That is NOT evidence of anything: the narrow
+-- constraint makes that state physically unrepresentable, so the absence is exactly what you
+-- would see whether or not the bug ever fired. It is consistent with the bug, not proof of it.)
+--
+-- WHY THIS MIGRATION ONLY EXPANDS
+-- -------------------------------
+-- Migrations run at backend STARTUP with 2-4 replicas rolling, so old and new code run
+-- against one schema during every deploy. Dropping `usage_counters_user_day_uq` here would
+-- make the OLD replicas' `ON CONFLICT (user_id, day)` raise 42P10 ("no unique or exclusion
+-- constraint matching the ON CONFLICT specification") for the whole rollout window — every
+-- LLM call 500s. So this release only ADDS the wider index and moves the code to an
+-- untargeted `ON CONFLICT DO NOTHING`, which is valid both with and without the old
+-- constraint. 0059 drops the old constraint in the NEXT release, once every replica is
+-- running code that no longer names it. Same discipline as 0054 → 0056.
+--
+-- Behaviour is deliberately UNCHANGED by this file alone: while the narrow constraint still
+-- exists it keeps winning, so the cap stays bypassable until 0059 lands. That is the price
+-- of a safe rollout, and it is why 0059 must not be forgotten.
+--
+-- WHAT 0059 MUST DO, AND WHY IT IS A ONE-WAY DOOR
+-- ----------------------------------------------
+-- `usage_counters_user_day_uq` is a UNIQUE CONSTRAINT (pg_constraint contype='u'), not a bare
+-- index, so 0059 is `ALTER TABLE usage_counters DROP CONSTRAINT usage_counters_user_day_uq`.
+-- A `DROP INDEX` will not work.
+--
+-- ⛔ 0059 IS IRREVERSIBLE the moment any user meters under two tenants on the same UTC day.
+-- Dropping the narrow constraint is what finally ALLOWS those two rows to coexist; once even
+-- one such pair exists, the constraint can never be re-created (it would fail on duplicate
+-- keys) without destroying or merging real metering data. There is therefore no schema
+-- rollback from 0059 — only roll forward.
+-- Equally: rolling the APPLICATION back to pre-0058 code after 0059 has run would 42P10 every
+-- single LLM call, because that code names `ON CONFLICT (user_id, day)` and the constraint is
+-- gone. The deploy that contains 0059 is the last point at which a code rollback is safe.
+--
+-- Every call site that names a conflict target on this table was moved off the narrow key in
+-- THIS release, because `DO UPDATE` cannot be untargeted and so cannot be made valid in both
+-- schema states the way the broker's `DO NOTHING` can: db/seed-ops.ts and
+-- tests/ops-metrics.test.ts now arbitrate on (tenant_id, user_id, day), and
+-- db/seed-tenant-showcase.ts + host/llm-broker.ts use an untargeted `ON CONFLICT DO NOTHING`.
+-- If a NEW site names (user_id, day), 0059 breaks it. tests/usage-counters-key.test.ts pins
+-- the key structurally (pg_index: unique, non-partial, exact KEY columns) so a near-miss like
+-- `(user_id, day) INCLUDE (tenant_id)` cannot pass for the real thing.
+
+CREATE UNIQUE INDEX IF NOT EXISTS usage_counters_tenant_user_day_uq
+  ON usage_counters (tenant_id, user_id, day);

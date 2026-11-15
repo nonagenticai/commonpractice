@@ -1,0 +1,66 @@
+{
+  "$comment": "Phase 3.2 Banking overlay (shallow). Industry-wide entities; relations to generic Customer resolve globally.",
+  "industry": "banking",
+  "entities": [
+    {
+      "name": "Account",
+      "label": "Bank Account",
+      "synonyms": ["acct", "acct_no", "iban"],
+      "description": "A customer's bank account.",
+      "attributes": [
+        { "name": "account_no", "type": "string", "synonyms": ["acct_no", "iban"] },
+        { "name": "kind", "type": "string", "synonyms": ["type"] },
+        { "name": "balance", "type": "number", "synonyms": ["bal"] },
+        { "name": "currency", "type": "string", "synonyms": ["ccy"] }
+      ],
+      "relations": [
+        { "to": "Customer", "predicate": "ownedBy", "label": "owned by", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Transaction",
+      "label": "Transaction",
+      "synonyms": ["txn", "tx"],
+      "description": "A debit or credit posted to an account.",
+      "attributes": [
+        { "name": "transaction_id", "type": "string", "synonyms": ["txn_id"] },
+        { "name": "amount", "type": "number", "synonyms": ["amt"] },
+        { "name": "direction", "type": "string", "synonyms": ["dr_cr"] },
+        { "name": "posted_at", "type": "date", "synonyms": ["value_date"] }
+      ],
+      "relations": [
+        { "to": "Account", "predicate": "on", "label": "posted on", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Loan",
+      "label": "Loan",
+      "synonyms": ["facility", "credit"],
+      "description": "A lending facility extended to a customer.",
+      "attributes": [
+        { "name": "loan_id", "type": "string" },
+        { "name": "principal", "type": "number" },
+        { "name": "rate", "type": "number", "synonyms": ["apr"] },
+        { "name": "term_months", "type": "number" }
+      ],
+      "relations": [
+        { "to": "Customer", "predicate": "heldBy", "label": "held by", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "KYC",
+      "label": "KYC Record",
+      "synonyms": ["know_your_customer", "cdd"],
+      "description": "Know-your-customer verification record for compliance.",
+      "attributes": [
+        { "name": "kyc_id", "type": "string" },
+        { "name": "status", "type": "string" },
+        { "name": "risk_rating", "type": "string", "synonyms": ["risk"] },
+        { "name": "verified_at", "type": "date" }
+      ],
+      "relations": [
+        { "to": "Customer", "predicate": "verifies", "label": "verifies", "cardinality": "one-to-one" }
+      ]
+    }
+  ]
+}

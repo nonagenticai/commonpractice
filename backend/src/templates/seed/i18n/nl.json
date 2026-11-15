@@ -1,0 +1,350 @@
+{
+  "locale": "nl",
+  "templates": {
+    "ai//extract-fields": {
+      "label": "Velden extraheren",
+      "description": "Haal een gestructureerde set velden uit vrije tekst met het beheerde taalmodel (ctx.llm).",
+      "tags": ["extractie", "gestructureerd", "nlp"],
+      "preconditions": [
+        "De brontekst staat op `text`",
+        "Een doelveldschema staat op `schema`"
+      ],
+      "postconditions": [
+        "`fields` is een object met de schemavelden als sleutels",
+        "Ontbrekende velden zijn null in plaats van verzonnen"
+      ],
+      "steps": [
+        { "label": "Prompt opbouwen", "detail": "Instrueer het model om ALLEEN JSON terug te geven die aan het schema voldoet; noem elk veld + type." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm() met de tekst; vraag om strikte JSON-uitvoer." },
+        { "label": "Parsen + bewaken", "detail": "Parse de JSON; forceer de typen; zet alles wat niet gevonden is op null (nooit hallucineren)." }
+      ]
+    },
+    "ai//classify": {
+      "label": "Classificeren",
+      "description": "Ken het best passende label uit een vaste set toe aan de invoertekst, met een betrouwbaarheidsscore.",
+      "tags": ["classificatie", "labelen", "nlp"],
+      "preconditions": [
+        "De invoertekst staat op `text`",
+        "Een gesloten labelset staat op `labels`"
+      ],
+      "postconditions": [
+        "`label` is een van de aangeboden labels (of een expliciete `unknown`)",
+        "`confidence` ligt tussen 0 en 1"
+      ],
+      "steps": [
+        { "label": "Keuzes beperken", "detail": "Vraag het model precies één label uit de aangeboden set te kiezen." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm(); vraag om { label, confidence } als JSON." },
+        { "label": "Valideren", "detail": "Wijs elk label buiten de set af; val terug op unknown met lage betrouwbaarheid." }
+      ]
+    },
+    "ai//summarize": {
+      "label": "Samenvatten",
+      "description": "Maak een samenvatting van de invoertekst met gestuurde lengte en toon.",
+      "tags": ["samenvatting", "nlp"],
+      "preconditions": [
+        "De invoertekst staat op `text`"
+      ],
+      "postconditions": [
+        "`summary` respecteert de gevraagde maximale lengte + toon"
+      ],
+      "steps": [
+        { "label": "Randvoorwaarden instellen", "detail": "Verwerk max_lines + toon in de systeeminstructie." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm() met de tekst en de randvoorwaarden." },
+        { "label": "Inkorten", "detail": "Dwing de regellimiet defensief af nadat het model heeft geantwoord." }
+      ]
+    },
+    "ai//generate-draft": {
+      "label": "Concept opstellen",
+      "description": "Stel tekst op vanuit een korte briefing in een gekozen toon (e-mail, antwoord, omschrijving, …).",
+      "tags": ["generatie", "concepten", "nlp"],
+      "preconditions": [
+        "Een briefing staat op `brief`"
+      ],
+      "postconditions": [
+        "`draft` is een direct bewerkbaar eerste concept in de gevraagde toon"
+      ],
+      "steps": [
+        { "label": "Opdracht kaderen", "detail": "Geef het model de doelgroep, het doel en de toon." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm() met de briefing; houd het bewerkbaar, niet definitief." },
+        { "label": "Teruggeven", "detail": "Geef de concepttekst terug zodat een mens die kan beoordelen + versturen." }
+      ]
+    },
+    "ai//route-by-intent": {
+      "label": "Routeren op intentie",
+      "description": "Herken de intentie van de gebruiker in een bericht en routeer naar een van een vaste set afhandelaars.",
+      "tags": ["intentie", "routering", "nlp"],
+      "preconditions": [
+        "Een bericht staat op `message`",
+        "Een set kandidaat-intenties staat op `intents`"
+      ],
+      "postconditions": [
+        "`intent` is een van de kandidaten (of `fallback`)",
+        "`confidence` ligt tussen 0 en 1"
+      ],
+      "steps": [
+        { "label": "Intenties beschrijven", "detail": "Geef het model één regel omschrijving per kandidaat-intentie." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm(); vraag om { intent, confidence } als JSON." },
+        { "label": "Afschermen", "detail": "Routeer onder een betrouwbaarheidsdrempel naar fallback in plaats van te gokken." }
+      ]
+    },
+    "ai//redact-pii": {
+      "label": "Persoonsgegevens maskeren",
+      "description": "Spoor persoonsgegevens (namen, e-mailadressen, telefoonnummers, identificatienummers) op in vrije tekst en maskeer ze.",
+      "tags": ["persoonsgegevens", "maskeren", "privacy"],
+      "preconditions": [
+        "De invoertekst staat op `text`",
+        "De te maskeren soorten persoonsgegevens staan op `kinds`"
+      ],
+      "postconditions": [
+        "`redacted` vervangt elk gevonden fragment door een getypeerde plaatshouder",
+        "`found` somt op wat er is aangetroffen (soort + aantal), nooit de ruwe waarden"
+      ],
+      "steps": [
+        { "label": "Soorten opgeven", "detail": "Geef het model op welke soorten persoonsgegevens het moet zoeken (e-mail, telefoon, naam, id)." },
+        { "label": "Model aanroepen", "detail": "Gebruik ctx.llm(); vraag om de te maskeren fragmenten, niet om de ruwe waarden terug." },
+        { "label": "Maskeren", "detail": "Vervang elk fragment door [REDACTED:<kind>]; tel de aantallen op in `found`." }
+      ]
+    },
+    "logic//validate-record": {
+      "label": "Record valideren",
+      "description": "Toets een record aan een set veldregels; laat geldige records door en verzamel bij ongeldige de redenen.",
+      "tags": ["validatie", "bewaking", "datakwaliteit"],
+      "preconditions": [
+        "Er is een recordobject beschikbaar op de invoer `record`",
+        "Er is een set veldregels (verplicht / type / bereik) gedefinieerd"
+      ],
+      "postconditions": [
+        "`valid` is alleen true als elke regel slaagt",
+        "`errors` bevat per gefaalde regel een leesbare reden"
+      ],
+      "steps": [
+        { "label": "Regelset laden", "detail": "Lees de regels per veld uit de invoer `rules` (verplicht, type, min/max, patroon)." },
+        { "label": "Elk veld toetsen", "detail": "Lees bij elke regel record[field] en toets die; voeg bij een fout een melding toe aan errors." },
+        { "label": "Beslissen", "detail": "valid = errors.length === 0; geef beide terug zodat verderop vertakt kan worden." }
+      ]
+    },
+    "logic//route-by-rule": {
+      "label": "Routeren op regel (beslistabel)",
+      "description": "Kies een vertakking door een geordende beslistabel op de invoer toe te passen — de eerste treffer wint.",
+      "tags": ["routering", "beslistabel", "vertakking"],
+      "preconditions": [
+        "Er is een invoerobject beschikbaar op `item`",
+        "Er is een geordende lijst regels (voorwaarde → route) gedefinieerd"
+      ],
+      "postconditions": [
+        "`route` is het label van de eerste passende regel, of de standaardroute",
+        "`matched` geeft aan of er een regel is afgegaan"
+      ],
+      "steps": [
+        { "label": "Beslistabel lezen", "detail": "Elke regel is { when: {field, op, value}, route }; werk van boven naar beneden." },
+        { "label": "Eerste treffer zoeken", "detail": "Geef de route terug van de eerste regel waarvan de voorwaarde geldt voor `item`." },
+        { "label": "Terugvallen", "detail": "Als geen enkele regel past, geef dan de ingestelde standaardroute terug en matched=false." }
+      ]
+    },
+    "logic//approve-reject": {
+      "label": "Goedkeuren / afwijzen (vierogenprincipe)",
+      "description": "Laat een item alleen door na toetsing aan het beleid én een expliciet menselijk besluit, met vastlegging van wie besliste en waarom.",
+      "tags": ["goedkeuring", "vierogenprincipe", "governance"],
+      "preconditions": [
+        "Het te beoordelen item staat op `item`",
+        "Er zijn een besluit (`approve` | `reject`) en de identiteit van de beoordelaar aangeleverd"
+      ],
+      "postconditions": [
+        "`approved` weerspiegelt het besluit van de beoordelaar na de beleidstoetsen",
+        "Er is een audittrail (beoordelaar, reden, tijdstempel) toegevoegd"
+      ],
+      "steps": [
+        { "label": "Beleidstoetsen vooraf uitvoeren", "detail": "Voer eerst de automatische controles uit; wijs alles wat het beleid niet doorstaat automatisch af, ongeacht de menselijke invoer." },
+        { "label": "Menselijk besluit vastleggen", "detail": "Leg besluit, beoordelaar en reden vast voor de audittrail." },
+        { "label": "Uitkomst teruggeven", "detail": "approved = policyPassed && decision === 'approve'; voeg het besluitrecord toe." }
+      ]
+    },
+    "logic//dedupe": {
+      "label": "Rijen ontdubbelen",
+      "description": "Voeg rijen met dezelfde sleutel samen, behoud één gekozen rij en tel hoeveel duplicaten er zijn verwijderd.",
+      "tags": ["ontdubbelen", "opschonen", "datakwaliteit"],
+      "preconditions": [
+        "Er is een lijst rijen beschikbaar op `rows`",
+        "Er is een ontdubbelsleutel (één of meer velden) ingesteld"
+      ],
+      "postconditions": [
+        "`rows` bevat hoogstens één overblijvende rij per sleutel",
+        "`removed` telt hoeveel duplicaten er zijn weggelaten"
+      ],
+      "steps": [
+        { "label": "Sleutel opbouwen", "detail": "Bereken per rij een samengestelde sleutel uit de ingestelde sleutelvelden." },
+        { "label": "Overblijver kiezen", "detail": "Houd per sleutel de eerste rij (of de nieuwste volgens `tiebreak`); laat de rest vallen." },
+        { "label": "Rapporteren", "detail": "Geef de ontdubbelde rijen terug plus het aantal verwijderde." }
+      ]
+    },
+    "logic//enrich-lookup": {
+      "label": "Verrijken via opzoektabel",
+      "description": "Koppel elke rij op een sleutel aan een referentietabel en voeg de gevonden referentievelden samen.",
+      "tags": ["verrijken", "koppelen", "opzoeken"],
+      "preconditions": [
+        "De te verrijken rijen staan op `rows`",
+        "Een referentiedataset/-tabel en de koppelsleutel zijn beschikbaar"
+      ],
+      "postconditions": [
+        "Elke rij krijgt de referentievelden erbij als er een treffer is",
+        "`unmatched` telt de rijen zonder referentietreffer"
+      ],
+      "steps": [
+        { "label": "Referentie indexeren", "detail": "Bouw een map van koppelsleutel naar referentierij zodat opzoeken in O(1) gaat." },
+        { "label": "Samenvoegen", "detail": "Zoek per invoerrij op sleutel op en voeg de referentievelden toe (bij conflicten wint de invoer)." },
+        { "label": "Missers bijhouden", "detail": "Tel de rijen zonder treffer zodat de kwaliteit bewaakt kan worden." }
+      ]
+    },
+    "logic//threshold-flag": {
+      "label": "Markeren op drempelwaarde",
+      "description": "Scoor elk item en markeer voor beoordeling wat een instelbare drempelwaarde overschrijdt.",
+      "tags": ["scoren", "markering", "bewaking"],
+      "preconditions": [
+        "De te scoren items staan op `items`",
+        "Er zijn een numeriek veld en een drempelwaarde ingesteld"
+      ],
+      "postconditions": [
+        "`flagged` bevat de items die de drempelwaarde overschrijden",
+        "`count` is het aantal gemarkeerde items"
+      ],
+      "steps": [
+        { "label": "Meetwaarde lezen", "detail": "Haal het numerieke veld uit elk item." },
+        { "label": "Vergelijken", "detail": "Markeer items waarbij value >= threshold (of <= bij een ondergrens)." },
+        { "label": "Verzamelen", "detail": "Geef de gemarkeerde deelverzameling terug met het aantal." }
+      ]
+    },
+    "logic//map-transform": {
+      "label": "Toewijzen / transformeren",
+      "description": "Vorm elke rij om naar een doelschema via een veldtoewijzing en laat velden vallen of hernoem ze zoals ingesteld.",
+      "tags": ["transformeren", "toewijzing", "hervormen"],
+      "preconditions": [
+        "De bronrijen staan op `rows`",
+        "Er is een veldtoewijzing (bron → doel) ingesteld"
+      ],
+      "postconditions": [
+        "Elke uitvoerrij bevat alleen de toegewezen doelvelden",
+        "De volgorde van de rijen blijft behouden"
+      ],
+      "steps": [
+        { "label": "Toewijzing lezen", "detail": "De mapping is { targetField: sourceField }." },
+        { "label": "Elke rij projecteren", "detail": "Bouw per rij een nieuw object met de toewijzing; sla niet-toegewezen velden over." },
+        { "label": "Teruggeven", "detail": "Geef de getransformeerde rijen in de oorspronkelijke volgorde terug." }
+      ]
+    },
+    "logic//aggregate": {
+      "label": "Aggregeren / groeperen",
+      "description": "Groepeer rijen op een sleutel en bereken per groep aggregaties (aantal / som / gemiddelde).",
+      "tags": ["aggregeren", "groeperen", "samenvatting"],
+      "preconditions": [
+        "De rijen staan op `rows`",
+        "Er zijn een groepeersleutel en de te aggregeren meetwaarden ingesteld"
+      ],
+      "postconditions": [
+        "`groups` bevat één samenvattingsrij per unieke sleutel",
+        "Elke samenvatting draagt de gevraagde aggregaties"
+      ],
+      "steps": [
+        { "label": "Verdelen", "detail": "Groepeer de rijen op het ingestelde veld group_by." },
+        { "label": "Samenvouwen", "detail": "Bereken per groep het aantal en de som/het gemiddelde van elk meetveld." },
+        { "label": "Teruggeven", "detail": "Geef één rij per groep terug met de aggregaties." }
+      ]
+    },
+    "ui//form": {
+      "label": "Formulier",
+      "description": "Verzamel en valideer gebruikersinvoer tegen een veldschema en geef de vastgelegde waarden door bij verzenden.",
+      "tags": ["formulier", "invoer", "vastleggen"],
+      "preconditions": [
+        "Een veldschema (labels, typen, verplicht) staat op `schema`"
+      ],
+      "postconditions": [
+        "`values` bevat de vastgelegde velden zodra er is verzonden",
+        "`submitted` wordt pas true als de validatie in de browser slaagt"
+      ],
+      "steps": [
+        { "label": "Velden weergeven", "detail": "Bouw de invoervelden op uit het schema (tekst / getal / keuzelijst / selectievakje)." },
+        { "label": "Valideren", "detail": "Blokkeer verzenden totdat de verplichte velden zijn ingevuld en de typen kloppen." },
+        { "label": "Doorgeven", "detail": "Geef bij verzenden de verzamelde waarden terug plus submitted=true." }
+      ]
+    },
+    "ui//table": {
+      "label": "Tabel / lijst",
+      "description": "Toon rijen in een sorteerbare, selecteerbare tabel op basis van een kolomdefinitie.",
+      "tags": ["tabel", "lijst", "raster"],
+      "preconditions": [
+        "De rijen staan op `rows`",
+        "Een kolomdefinitie staat op `columns`"
+      ],
+      "postconditions": [
+        "`selected` weerspiegelt de rij(en) die de gebruiker kiest"
+      ],
+      "steps": [
+        { "label": "Kolommen definiëren", "detail": "Koppel elke kolom aan een rijveld + kop + optionele opmaakfunctie." },
+        { "label": "Rijen weergeven", "detail": "Toon de rijen; ondersteun sorteren op kolom en het selecteren van rijen." },
+        { "label": "Selectie doorgeven", "detail": "Geef de geselecteerde rij(en) terug wanneer de gebruiker klikt." }
+      ]
+    },
+    "ui//chart": {
+      "label": "Grafiek",
+      "description": "Visualiseer één of meer reeksen als lijn-, staaf- of cirkeldiagram.",
+      "tags": ["grafiek", "visualisatie", "rapportage"],
+      "preconditions": [
+        "De reeksgegevens staan op `series`"
+      ],
+      "postconditions": [
+        "De grafiek wordt getekend voor het gekozen `type`"
+      ],
+      "steps": [
+        { "label": "Grafiektype kiezen", "detail": "lijn voor trends, staaf voor vergelijkingen, cirkel voor samenstelling." },
+        { "label": "Gegevens koppelen", "detail": "Koppel de punten van de reeks aan assen / taartpunten." },
+        { "label": "Tekenen", "detail": "Teken de grafiek met asbijschriften + een legenda." }
+      ]
+    },
+    "ui//kpi-card": {
+      "label": "KPI-kaart",
+      "description": "Toon één kerncijfer met een optioneel verschil ten opzichte van een vorige periode.",
+      "tags": ["kpi", "meetwaarde", "dashboard"],
+      "preconditions": [
+        "Er zijn een label en een numerieke waarde aangeleverd"
+      ],
+      "postconditions": [
+        "Het kerncijfer + de richting van het verschil worden getoond"
+      ],
+      "steps": [
+        { "label": "Waarde tonen", "detail": "Toon het kerngetal met het label erbij." },
+        { "label": "Verschil tonen", "detail": "Als er een verschil is meegegeven, toon dan omhoog/omlaag met teken + kleur." }
+      ]
+    },
+    "ui//detail-view": {
+      "label": "Detailweergave",
+      "description": "Toon één record als een alleen-lezen detailpaneel met label/waarde-regels.",
+      "tags": ["detail", "record", "alleen-lezen"],
+      "preconditions": [
+        "Er staat een record op `record`"
+      ],
+      "postconditions": [
+        "De gekozen velden worden getoond als label/waarde-regels"
+      ],
+      "steps": [
+        { "label": "Velden kiezen", "detail": "Gebruik `fields` om te kiezen + ordenen welke sleutels je toont (standaard: alle)." },
+        { "label": "Weergeven", "detail": "Toon elk als een label/waarde-regel; maak datums + getallen netjes op." }
+      ]
+    },
+    "ui//filter-bar": {
+      "label": "Filterbalk",
+      "description": "Toon een set filters en geef de resulterende zoekopdracht door zodra de gebruiker ze aanpast.",
+      "tags": ["filter", "zoeken", "bediening"],
+      "preconditions": [
+        "Een definitie van de filtervelden staat op `fields`"
+      ],
+      "postconditions": [
+        "`query` weerspiegelt de huidige filterkeuzes",
+        "`changed` gaat af zodra een filter wijzigt"
+      ],
+      "steps": [
+        { "label": "Filters weergeven", "detail": "Bouw per veld een filter (tekst / keuzelijst / datumbereik)." },
+        { "label": "Verzamelen", "detail": "Stel bij elke wijziging de actieve filters samen tot één query-object." },
+        { "label": "Doorgeven", "detail": "Geef de query terug zodat een volgend gegevensblok opnieuw kan ophalen." }
+      ]
+    }
+  }
+}

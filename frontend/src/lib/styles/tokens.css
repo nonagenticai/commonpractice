@@ -1,0 +1,79 @@
+/* Design tokens — ported verbatim from nonagentic_homepage/demo.html :root
+   (lines 21–70). Single source of truth for the Common Practice look. */
+:root {
+  --c-midnight: #0B1437;
+  --c-midnight-2: #15203F;
+  --c-navy: #1E2761;
+  --c-ink: #1E293B;
+  --c-muted: #64748B;
+  --c-faint: #94A3B8;
+  --c-border: #E2E8F0;
+  --c-border-strong: #CBD5E1;
+  --c-surface: #F8FAFC;
+  --c-surface-2: #F1F5F9;
+  --c-white: #FFFFFF;
+
+  --c-teal: #0D9488;
+  --c-teal-mid: #14B8A6;
+  --c-teal-light: #CCFBF1;
+  --c-teal-pale: #F0FDFA;
+  --c-teal-dark: #0F766E;
+
+  --c-coral: #EA580C;
+  --c-coral-mid: #F97316;
+  --c-coral-light: #FFEDD5;
+  --c-coral-pale: #FFF7ED;
+  --c-coral-dark: #C2410C;
+
+  --c-amber: #F59E0B;
+  --c-amber-light: #FEF3C7;
+  --c-amber-pale: #FFFBEB;
+  /* ⛔ WAS MISSING WHILE BEING USED. Every other family here carries a `-dark` step
+     (`--c-teal-dark`, `--c-coral-dark`); amber did not, yet `var(--c-amber-dark)` is referenced at
+     ten sites. The ones that spelled an inline fallback rendered correctly by accident; the two
+     that did not — `routes/connectors/+page.svelte`'s `.notice.warn` and
+     `routes/(tenant)/members/+page.svelte`'s `.banner.warn` — resolved to `inherit`, i.e. a warning
+     banner painted in body ink with no warning colour at all. Defining it repairs both without
+     touching either file, and the inline fallbacks stay harmless. */
+  --c-amber-dark: #92400E;
+
+  --c-emerald: #10B981;
+  --c-emerald-light: #D1FAE5;
+  --c-rose: #EF4444;
+  --c-rose-light: #FEE2E2;
+  --c-violet: #7C3AED;
+  --c-violet-light: #EDE9FE;
+
+  /* ⛔ THE ARABIC/HEBREW FACES MUST BE IN *THIS* DECLARATION, NOT ONLY IN app.css's `@theme`.
+     These tokens are defined TWICE: there, and here. `app.css` does `@import 'tailwindcss'`, so its
+     `@theme` block compiles into `@layer theme` — and THIS `:root` is UNLAYERED. Unlayered wins
+     over any layered declaration regardless of source order, so this block is what actually
+     resolves and the `@theme` copy is decoration.
+
+     That is not a deduction, it is measured on the DEPLOYED stylesheet: the built CSS carried both
+     definitions, and Chrome's `getPlatformFontsForNode` reported Arabic rendering in **Geeza Pro**
+     and Hebrew in **Lucida Grande**, with ZERO Arabic/Hebrew woff2 ever requested even with Arabic
+     on screen. A positive control on the same page — an element given `"IBM Plex Sans Arabic"`
+     explicitly — loaded the webfont fine (HTTP 200, 36 glyphs), which proves the `<link>` was
+     correct and the TOKEN was the fault.
+
+     ⚠️ AND NO SOURCE-LEVEL TEST CAUGHT IT. The guard asserted that the CSS *names* each family and
+     that `app.html` *requests* it. Both were true the whole time. Neither says which of two
+     competing declarations WINS. `font-coverage.test.ts` now requires EVERY declaration of these
+     tokens to carry the RTL faces, which is the only form of the rule that survives a duplicate. */
+  --font-display: 'Fraunces', 'IBM Plex Sans Arabic', 'IBM Plex Sans Hebrew', Georgia, serif;
+  --font-sans:
+    'IBM Plex Sans', 'IBM Plex Sans Arabic', 'IBM Plex Sans Hebrew', -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+  --r-sm: 4px;
+  --r: 6px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+
+  --sh-sm: 0 1px 2px rgba(15,23,42,0.05);
+  --sh: 0 1px 3px rgba(15,23,42,0.07), 0 1px 2px rgba(15,23,42,0.04);
+  --sh-md: 0 4px 14px rgba(15,23,42,0.08);
+  --sh-lg: 0 12px 32px rgba(15,23,42,0.12);
+}

@@ -1,0 +1,72 @@
+# Allowlist for scripts/ci/no-private-refs.sh — a security decision, not a convenience.
+#
+# One rule per line, `path/glob:pattern  # justification`. The glob matches the repo-relative
+# path; the pattern is an ERE matched against the whole `git grep` hit (`path:line:text`).
+# Blank lines and `#` comments are ignored. A justification is mandatory in review.
+#
+# ⛔ Do NOT add an entry to keep a real internal hostname, address or private repository path
+# in a public tree. Remove it instead. An entry is only for a string that *looks* private but
+# is not: a documented loopback example, a placeholder, or a term that collides with a rule.
+#
+# The guard and this file necessarily spell the patterns out; the guard excludes both from
+# its own scan. Everything else is scanned.
+#
+# No entries by default. An empty file that fails the build is the correct starting state.
+
+# The Kubernetes cluster domain is universal, not estate topology: every conformant cluster
+# resolves `*.svc.cluster.local`. These lines are the egress guard's own suffix rule, the
+# fixtures that exercise it, and one doc comment — no hostname here maps a private deployment.
+backend/src/ai/llm/egress-fetch.ts:\.svc\.cluster\.local
+backend/src/host/egress-guard.ts:\.svc\.cluster\.local
+backend/src/config.ts:\.svc\.cluster\.local
+backend/tests/egress-guard\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm-select\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm-broker-unpinned-model\.test\.ts:\.svc\.cluster\.local
+# Docker Desktop's standard alias for the host machine; it names no estate host.
+backend/scripts/db-preflight\.sh:host\.docker\.internal
+
+# Kubernetes service FQDNs: `<service>.<namespace>.svc.cluster.local` is how every workload in
+# any cluster addresses another. It names a service and a namespace inside the cluster's own DNS
+# zone — no host, no address, no estate-specific domain — and is identical in a stranger's cluster.
+# The app's own service names (`inference-router`, `storage-api`, `fr-backend`, `pgbouncer`) are
+# already public in the repositories being published. These lines are code defaults, migration
+# defaults, doc comments and the test constants that exercise them; rewriting only one side of a
+# pair silently breaks the assertion, measured on the first pass over this repo (20 red tests).
+backend/src/ai/llm/provider-catalog.ts:\.svc\.cluster\.local
+backend/src/config.ts:\.svc\.cluster\.local
+backend/src/datasets/connectors/storage.ts:\.svc\.cluster\.local
+backend/src/host/egress-guard.ts:\.svc\.cluster\.local
+backend/src/host/storage-writer.ts:\.svc\.cluster\.local
+backend/migrations/0035_llm_local_default\.sql:\.svc\.cluster\.local
+backend/migrations/0046_egress_allowlist_llm_providers\.sql:\.svc\.cluster\.local
+backend/migrations/0051_scheduler_ticks\.sql:\.svc\.cluster\.local
+
+# Per-file entries generated from the tree (the glob matcher does not recurse).
+\.ci/private\-refs\.allow:\.svc\.cluster\.local
+backend/migrations/0035_llm_local_default\.sql:\.svc\.cluster\.local
+backend/migrations/0046_egress_allowlist_llm_providers\.sql:\.svc\.cluster\.local
+backend/migrations/0051_scheduler_ticks\.sql:\.svc\.cluster\.local
+backend/src/ai/llm/egress\-fetch\.ts:\.svc\.cluster\.local
+backend/src/ai/llm/provider\-catalog\.ts:\.svc\.cluster\.local
+backend/src/config\.ts:\.svc\.cluster\.local
+backend/src/datasets/connectors/storage\.ts:\.svc\.cluster\.local
+backend/src/host/egress\-guard\.ts:\.svc\.cluster\.local
+backend/src/host/storage\-writer\.ts:\.svc\.cluster\.local
+backend/tests/adapter\-identity\.test\.ts:\.svc\.cluster\.local
+backend/tests/egress\-guard\.test\.ts:\.svc\.cluster\.local
+backend/tests/inference\-router\-single\-emitter\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm\-broker\-unpinned\-model\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm\-ctx\-egress\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm\-platform\-local\-only\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm\-select\.test\.ts:\.svc\.cluster\.local
+backend/tests/llm\-settings\.test\.ts:\.svc\.cluster\.local
+backend/tests/part\-b\-plans\-billing\.test\.ts:\.svc\.cluster\.local
+backend/tests/platform\-inference\.test\.ts:\.svc\.cluster\.local
+backend/tests/runner\-tenant\-inference\.test\.ts:\.svc\.cluster\.local
+backend/tests/runs\.test\.ts:\.svc\.cluster\.local
+backend/tests/storage\-notify\-client\.test\.ts:\.svc\.cluster\.local
+backend/tests/storage\-path\-traversal\.test\.ts:\.svc\.cluster\.local
+backend/tests/storage\-writer\.test\.ts:\.svc\.cluster\.local
+frontend/src/lib/llm/adapter\-identity\.backend\-contract\.test\.ts:\.svc\.cluster\.local
+frontend/src/routes/\(tenant\)/llm\-settings/llm\-settings\.key\-vendor\.render\.test\.ts:\.svc\.cluster\.local
+scripts/ci/no\-private\-refs\.sh:\.svc\.cluster\.local

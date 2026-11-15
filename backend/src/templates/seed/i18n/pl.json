@@ -1,0 +1,350 @@
+{
+  "locale": "pl",
+  "templates": {
+    "ai//extract-fields": {
+      "label": "Wyodrębnianie pól",
+      "description": "Wyodrębnia ustrukturyzowany zestaw pól z tekstu swobodnego przy użyciu zarządzanego modelu językowego (ctx.llm).",
+      "tags": ["ekstrakcja", "ustrukturyzowane", "nlp"],
+      "preconditions": [
+        "Tekst źródłowy jest przekazany w `text`",
+        "Schemat pól docelowych jest przekazany w `schema`"
+      ],
+      "postconditions": [
+        "`fields` to obiekt, którego kluczami są pola schematu",
+        "Brakujące pola mają wartość null, zamiast być zmyślane"
+      ],
+      "steps": [
+        { "label": "Zbuduj prompt", "detail": "Poleć modelowi zwrócić WYŁĄCZNIE JSON zgodny ze schematem; wymień każde pole + jego typ." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm() z tekstem; zażądaj ścisłego wyjścia JSON." },
+        { "label": "Sparsuj + zabezpiecz", "detail": "Sparsuj JSON; wymuś typy; ustaw null wszędzie tam, gdzie nic nie znaleziono (nigdy nie zmyślaj)." }
+      ]
+    },
+    "ai//classify": {
+      "label": "Klasyfikacja",
+      "description": "Przypisuje tekstowi wejściowemu najlepiej pasującą etykietę ze stałego zbioru wraz z oceną pewności.",
+      "tags": ["klasyfikacja", "etykietowanie", "nlp"],
+      "preconditions": [
+        "Tekst wejściowy jest w `text`",
+        "Zamknięty zbiór etykiet jest w `labels`"
+      ],
+      "postconditions": [
+        "`label` jest jedną z podanych etykiet (albo jawnym `unknown`)",
+        "`confidence` mieści się w przedziale od 0 do 1"
+      ],
+      "steps": [
+        { "label": "Ogranicz wybór", "detail": "Poproś model o wybranie dokładnie jednej etykiety z podanego zbioru." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm(); poproś o { label, confidence } w formacie JSON." },
+        { "label": "Zweryfikuj", "detail": "Odrzuć każdą etykietę spoza zbioru; w razie potrzeby użyj unknown z niską pewnością." }
+      ]
+    },
+    "ai//summarize": {
+      "label": "Streszczanie",
+      "description": "Tworzy streszczenie tekstu wejściowego o kontrolowanej długości i tonie.",
+      "tags": ["streszczenie", "nlp"],
+      "preconditions": [
+        "Tekst wejściowy jest w `text`"
+      ],
+      "postconditions": [
+        "`summary` zachowuje żądaną maksymalną długość + ton"
+      ],
+      "steps": [
+        { "label": "Ustaw ograniczenia", "detail": "Zakoduj max_lines + ton w instrukcji systemowej." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm() z tekstem i ograniczeniami." },
+        { "label": "Przytnij", "detail": "Wymuś limit wierszy zapobiegawczo po odpowiedzi modelu." }
+      ]
+    },
+    "ai//generate-draft": {
+      "label": "Tworzenie szkicu",
+      "description": "Redaguje treść na podstawie krótkiego briefu w wybranym tonie (e-mail, odpowiedź, opis, …).",
+      "tags": ["generowanie", "redagowanie", "nlp"],
+      "preconditions": [
+        "Brief jest przekazany w `brief`"
+      ],
+      "postconditions": [
+        "`draft` to gotowy do edycji pierwszy szkic w żądanym tonie"
+      ],
+      "steps": [
+        { "label": "Określ zadanie", "detail": "Podaj modelowi odbiorcę, cel i ton." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm() z briefem; zostaw tekst edytowalny, nie ostateczny." },
+        { "label": "Zwróć", "detail": "Zwróć tekst szkicu, aby człowiek mógł go sprawdzić + wysłać." }
+      ]
+    },
+    "ai//route-by-intent": {
+      "label": "Kierowanie według intencji",
+      "description": "Rozpoznaje intencję użytkownika w wiadomości i kieruje ją do jednego ze stałego zbioru modułów obsługi.",
+      "tags": ["intencja", "kierowanie", "nlp"],
+      "preconditions": [
+        "Wiadomość jest w `message`",
+        "Zbiór możliwych intencji jest w `intents`"
+      ],
+      "postconditions": [
+        "`intent` jest jedną z możliwych intencji (albo `fallback`)",
+        "`confidence` mieści się w przedziale od 0 do 1"
+      ],
+      "steps": [
+        { "label": "Opisz intencje", "detail": "Podaj modelowi jednowierszowy opis każdej możliwej intencji." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm(); poproś o { intent, confidence } w formacie JSON." },
+        { "label": "Zabezpiecz", "detail": "Poniżej progu pewności kieruj do fallback, zamiast zgadywać." }
+      ]
+    },
+    "ai//redact-pii": {
+      "label": "Maskowanie danych osobowych",
+      "description": "Wykrywa i maskuje dane osobowe (imiona i nazwiska, adresy e-mail, numery telefonów, identyfikatory) w tekście swobodnym.",
+      "tags": ["dane osobowe", "maskowanie", "prywatność"],
+      "preconditions": [
+        "Tekst wejściowy jest w `text`",
+        "Rodzaje danych osobowych do zamaskowania są w `kinds`"
+      ],
+      "postconditions": [
+        "`redacted` zastępuje każdy wykryty fragment typowanym symbolem zastępczym",
+        "`found` wymienia to, co wykryto (rodzaj + liczba), nigdy surowych wartości"
+      ],
+      "steps": [
+        { "label": "Wskaż rodzaje", "detail": "Podaj modelowi, jakich rodzajów danych osobowych ma szukać (e-mail, telefon, imię, identyfikator)." },
+        { "label": "Wywołaj model", "detail": "Użyj ctx.llm(); poproś o fragmenty do zamaskowania, a nie o zwrot surowych wartości." },
+        { "label": "Zamaskuj", "detail": "Zastąp każdy fragment przez [REDACTED:<kind>]; zlicz wystąpienia w `found`." }
+      ]
+    },
+    "logic//validate-record": {
+      "label": "Walidacja rekordu",
+      "description": "Sprawdza rekord względem zestawu reguł pól; przepuszcza rekordy poprawne, a dla niepoprawnych zbiera przyczyny.",
+      "tags": ["walidacja", "zabezpieczenie", "jakość danych"],
+      "preconditions": [
+        "Obiekt rekordu jest dostępny na wejściu `record`",
+        "Zdefiniowany jest zestaw reguł pól (wymagane / typ / zakres)"
+      ],
+      "postconditions": [
+        "`valid` ma wartość true tylko wtedy, gdy spełniona jest każda reguła",
+        "`errors` zawiera czytelną przyczynę dla każdej niespełnionej reguły"
+      ],
+      "steps": [
+        { "label": "Wczytaj zestaw reguł", "detail": "Odczytaj reguły dla poszczególnych pól z wejścia `rules` (wymagane, typ, min/maks, wzorzec)." },
+        { "label": "Sprawdź każde pole", "detail": "Dla każdej reguły odczytaj record[field] i sprawdź je; przy błędzie dodaj komunikat do errors." },
+        { "label": "Zdecyduj", "detail": "valid = errors.length === 0; zwróć oba, aby dalsze kroki mogły się rozgałęzić." }
+      ]
+    },
+    "logic//route-by-rule": {
+      "label": "Kierowanie według reguł (tablica decyzyjna)",
+      "description": "Wybiera gałąź, stosując do danych wejściowych uporządkowaną tablicę decyzyjną — wygrywa pierwsze dopasowanie.",
+      "tags": ["kierowanie", "tablica decyzyjna", "rozgałęzienie"],
+      "preconditions": [
+        "Obiekt wejściowy jest dostępny w `item`",
+        "Zdefiniowana jest uporządkowana lista reguł (warunek → trasa)"
+      ],
+      "postconditions": [
+        "`route` to etykieta pierwszej pasującej reguły albo trasa domyślna",
+        "`matched` wskazuje, czy zadziałała którakolwiek reguła"
+      ],
+      "steps": [
+        { "label": "Odczytaj tablicę decyzyjną", "detail": "Każda reguła ma postać { when: {field, op, value}, route }; przetwarzaj od góry do dołu." },
+        { "label": "Znajdź pierwsze dopasowanie", "detail": "Zwróć trasę pierwszej reguły, której warunek jest spełniony dla `item`." },
+        { "label": "Użyj wartości domyślnej", "detail": "Jeśli żadna reguła nie pasuje, zwróć skonfigurowaną trasę domyślną oraz matched=false." }
+      ]
+    },
+    "logic//approve-reject": {
+      "label": "Zatwierdzanie / odrzucanie (zasada dwóch par oczu)",
+      "description": "Przepuszcza pozycję dopiero po sprawdzeniu zgodności z polityką i po wyraźnej decyzji człowieka, zapisując, kto zdecydował i dlaczego.",
+      "tags": ["zatwierdzanie", "dwie pary oczu", "nadzór"],
+      "preconditions": [
+        "Pozycja poddana ocenie jest w `item`",
+        "Podane są decyzja (`approve` | `reject`) oraz tożsamość osoby oceniającej"
+      ],
+      "postconditions": [
+        "`approved` odzwierciedla decyzję osoby oceniającej po kontrolach zgodności z polityką",
+        "Dołączona jest ścieżka audytu (osoba oceniająca, przyczyna, znacznik czasu)"
+      ],
+      "steps": [
+        { "label": "Wykonaj wstępne kontrole polityki", "detail": "Najpierw uruchom automatyczne kontrole; automatycznie odrzuć wszystko, co nie spełnia polityki, niezależnie od decyzji człowieka." },
+        { "label": "Zapisz decyzję człowieka", "detail": "Zarejestruj decyzję, osobę oceniającą i przyczynę na potrzeby ścieżki audytu." },
+        { "label": "Zwróć wynik", "detail": "approved = policyPassed && decision === 'approve'; dołącz zapis decyzji." }
+      ]
+    },
+    "logic//dedupe": {
+      "label": "Usuwanie duplikatów wierszy",
+      "description": "Scala wiersze o tym samym kluczu, zachowując jeden wybrany wiersz i zliczając usunięte duplikaty.",
+      "tags": ["duplikaty", "czyszczenie", "jakość danych"],
+      "preconditions": [
+        "Lista wierszy jest dostępna w `rows`",
+        "Skonfigurowany jest klucz deduplikacji (jedno lub więcej pól)"
+      ],
+      "postconditions": [
+        "`rows` zawiera co najwyżej jeden zachowany wiersz na klucz",
+        "`removed` zlicza, ile duplikatów usunięto"
+      ],
+      "steps": [
+        { "label": "Zbuduj klucz", "detail": "Wylicz dla każdego wiersza klucz złożony ze skonfigurowanych pól kluczowych." },
+        { "label": "Wybierz wiersz do zachowania", "detail": "Dla każdego klucza zachowaj pierwszy wiersz (albo najnowszy według `tiebreak`); resztę odrzuć." },
+        { "label": "Zaraportuj", "detail": "Zwróć wiersze po deduplikacji oraz liczbę usuniętych." }
+      ]
+    },
+    "logic//enrich-lookup": {
+      "label": "Wzbogacanie przez tabelę odniesienia",
+      "description": "Łączy każdy wiersz z tabelą odniesienia po kluczu i scala dopasowane pola odniesienia.",
+      "tags": ["wzbogacanie", "złączenie", "wyszukiwanie"],
+      "preconditions": [
+        "Wiersze do wzbogacenia są w `rows`",
+        "Dostępne są zbiór danych lub tabela odniesienia oraz klucz złączenia"
+      ],
+      "postconditions": [
+        "Każdy wiersz otrzymuje pola odniesienia, gdy znaleziono dopasowanie",
+        "`unmatched` zlicza wiersze bez dopasowania w tabeli odniesienia"
+      ],
+      "steps": [
+        { "label": "Zindeksuj tabelę odniesienia", "detail": "Zbuduj mapę z klucza złączenia na wiersz odniesienia, aby wyszukiwać w O(1)." },
+        { "label": "Scal", "detail": "Dla każdego wiersza wejściowego wyszukaj po kluczu i dołącz pola odniesienia (przy konflikcie wygrywa wejście)." },
+        { "label": "Śledź nietrafienia", "detail": "Zliczaj wiersze bez dopasowania, aby można było monitorować jakość." }
+      ]
+    },
+    "logic//threshold-flag": {
+      "label": "Oznaczanie po przekroczeniu progu",
+      "description": "Ocenia każdą pozycję i oznacza do przeglądu te, które przekraczają konfigurowalny próg.",
+      "tags": ["ocena", "oznaczanie", "monitorowanie"],
+      "preconditions": [
+        "Pozycje do oceny są w `items`",
+        "Skonfigurowane są pole liczbowe oraz próg"
+      ],
+      "postconditions": [
+        "`flagged` zawiera pozycje, które przekraczają próg",
+        "`count` to liczba oznaczonych pozycji"
+      ],
+      "steps": [
+        { "label": "Odczytaj miarę", "detail": "Wyodrębnij pole liczbowe z każdej pozycji." },
+        { "label": "Porównaj", "detail": "Oznacz pozycje, dla których value >= threshold (albo <= przy dolnych granicach)." },
+        { "label": "Zbierz", "detail": "Zwróć oznaczony podzbiór wraz z jego liczebnością." }
+      ]
+    },
+    "logic//map-transform": {
+      "label": "Mapowanie / przekształcanie",
+      "description": "Przekształca każdy wiersz do schematu docelowego przy użyciu mapowania pól, pomijając lub zmieniając nazwy zgodnie z konfiguracją.",
+      "tags": ["przekształcanie", "mapowanie", "przebudowa"],
+      "preconditions": [
+        "Wiersze źródłowe są w `rows`",
+        "Skonfigurowane jest mapowanie pól (źródło → cel)"
+      ],
+      "postconditions": [
+        "Każdy wiersz wyjściowy zawiera wyłącznie zmapowane pola docelowe",
+        "Kolejność wierszy zostaje zachowana"
+      ],
+      "steps": [
+        { "label": "Odczytaj mapowanie", "detail": "Mapowanie ma postać { targetField: sourceField }." },
+        { "label": "Zrzutuj każdy wiersz", "detail": "Zbuduj dla każdego wiersza nowy obiekt na podstawie mapowania; pomiń pola niezmapowane." },
+        { "label": "Zwróć", "detail": "Zwróć przekształcone wiersze w pierwotnej kolejności." }
+      ]
+    },
+    "logic//aggregate": {
+      "label": "Agregacja / grupowanie",
+      "description": "Grupuje wiersze według klucza i wylicza agregaty (liczba / suma / średnia) dla każdej grupy.",
+      "tags": ["agregacja", "grupowanie", "podsumowanie"],
+      "preconditions": [
+        "Wiersze są w `rows`",
+        "Skonfigurowane są klucz grupowania oraz miary do zagregowania"
+      ],
+      "postconditions": [
+        "`groups` zawiera jeden wiersz podsumowania na każdy odrębny klucz",
+        "Każde podsumowanie zawiera żądane agregaty"
+      ],
+      "steps": [
+        { "label": "Podziel na grupy", "detail": "Pogrupuj wiersze według skonfigurowanego pola group_by." },
+        { "label": "Zredukuj", "detail": "Dla każdej grupy wylicz liczbę oraz sumę/średnią każdego pola miary." },
+        { "label": "Zwróć wynik", "detail": "Zwróć po jednym wierszu na grupę wraz z agregatami." }
+      ]
+    },
+    "ui//form": {
+      "label": "Formularz",
+      "description": "Zbiera i weryfikuje dane wprowadzone przez użytkownika względem schematu pól i przekazuje zebrane wartości po wysłaniu.",
+      "tags": ["formularz", "wprowadzanie", "zbieranie"],
+      "preconditions": [
+        "Schemat pól (etykiety, typy, wymagalność) jest przekazany w `schema`"
+      ],
+      "postconditions": [
+        "`values` zawiera zebrane pola po wysłaniu formularza",
+        "`submitted` przyjmuje wartość true dopiero po pomyślnej walidacji po stronie klienta"
+      ],
+      "steps": [
+        { "label": "Wyrenderuj pola", "detail": "Zbuduj pola wejściowe na podstawie schematu (tekst / liczba / lista / pole wyboru)." },
+        { "label": "Zweryfikuj", "detail": "Blokuj wysłanie, dopóki pola wymagane nie są wypełnione, a typy poprawne." },
+        { "label": "Przekaż", "detail": "Po wysłaniu zwróć zebrane wartości oraz submitted=true." }
+      ]
+    },
+    "ui//table": {
+      "label": "Tabela / lista",
+      "description": "Wyświetla wiersze w sortowalnej tabeli z możliwością zaznaczania, na podstawie definicji kolumn.",
+      "tags": ["tabela", "lista", "siatka"],
+      "preconditions": [
+        "Wiersze są przekazane w `rows`",
+        "Definicja kolumn jest przekazana w `columns`"
+      ],
+      "postconditions": [
+        "`selected` odzwierciedla wiersz lub wiersze wybrane przez użytkownika"
+      ],
+      "steps": [
+        { "label": "Zdefiniuj kolumny", "detail": "Przypisz każdej kolumnie pole wiersza + nagłówek + opcjonalny formater." },
+        { "label": "Wyrenderuj wiersze", "detail": "Wyświetl wiersze; obsłuż sortowanie po kolumnie i zaznaczanie wierszy." },
+        { "label": "Przekaż zaznaczenie", "detail": "Zwróć zaznaczony wiersz lub wiersze, gdy użytkownik kliknie." }
+      ]
+    },
+    "ui//chart": {
+      "label": "Wykres",
+      "description": "Przedstawia jedną lub więcej serii jako wykres liniowy, słupkowy albo kołowy.",
+      "tags": ["wykres", "wizualizacja", "raport"],
+      "preconditions": [
+        "Dane serii są przekazane w `series`"
+      ],
+      "postconditions": [
+        "Wykres jest rysowany dla wybranego `type`"
+      ],
+      "steps": [
+        { "label": "Wybierz typ wykresu", "detail": "liniowy dla trendów, słupkowy dla porównań, kołowy dla struktury." },
+        { "label": "Przypisz dane", "detail": "Przypisz punkty serii do osi / wycinków." },
+        { "label": "Narysuj", "detail": "Narysuj wykres z opisami osi + legendą." }
+      ]
+    },
+    "ui//kpi-card": {
+      "label": "Karta KPI",
+      "description": "Pokazuje pojedynczy kluczowy wskaźnik z opcjonalną zmianą względem poprzedniego okresu.",
+      "tags": ["kpi", "wskaźnik", "pulpit"],
+      "preconditions": [
+        "Podane są etykieta oraz wartość liczbowa"
+      ],
+      "postconditions": [
+        "Wyświetlane są wskaźnik + kierunek zmiany"
+      ],
+      "steps": [
+        { "label": "Pokaż wartość", "detail": "Wyświetl główną liczbę wraz z etykietą." },
+        { "label": "Pokaż zmianę", "detail": "Jeśli podano zmianę, pokaż wzrost/spadek ze znakiem + kolorem." }
+      ]
+    },
+    "ui//detail-view": {
+      "label": "Widok szczegółów",
+      "description": "Wyświetla pojedynczy rekord jako panel szczegółów etykieta/wartość tylko do odczytu.",
+      "tags": ["szczegóły", "rekord", "tylko do odczytu"],
+      "preconditions": [
+        "Rekord jest przekazany w `record`"
+      ],
+      "postconditions": [
+        "Wybrane pola są wyświetlane jako wiersze etykieta/wartość"
+      ],
+      "steps": [
+        { "label": "Wybierz pola", "detail": "Użyj `fields`, aby wybrać + uporządkować wyświetlane klucze (domyślnie: wszystkie)." },
+        { "label": "Wyświetl", "detail": "Pokaż każde jako wiersz etykieta/wartość; sformatuj daty + liczby." }
+      ]
+    },
+    "ui//filter-bar": {
+      "label": "Pasek filtrów",
+      "description": "Wyświetla zestaw kontrolek filtrowania i przekazuje wynikowe zapytanie, gdy użytkownik je zmienia.",
+      "tags": ["filtr", "wyszukiwanie", "kontrolki"],
+      "preconditions": [
+        "Definicja pól filtrowania jest przekazana w `fields`"
+      ],
+      "postconditions": [
+        "`query` odzwierciedla bieżące ustawienia filtrów",
+        "`changed` uruchamia się przy każdej zmianie kontrolki"
+      ],
+      "steps": [
+        { "label": "Wyrenderuj kontrolki", "detail": "Zbuduj kontrolkę dla każdego pola (tekst / lista / zakres dat)." },
+        { "label": "Zbierz", "detail": "Przy każdej zmianie złóż aktywne filtry w obiekt zapytania." },
+        { "label": "Przekaż", "detail": "Zwróć zapytanie, aby kolejny blok danych mógł ponownie pobrać dane." }
+      ]
+    }
+  }
+}

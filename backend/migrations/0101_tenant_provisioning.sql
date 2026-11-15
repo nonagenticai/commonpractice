@@ -1,0 +1,21 @@
+-- 0101 — a per-tenant record of what workspace creation actually did, step by step.
+--
+-- Prod 2026-10-13 (Netcare): the licence step succeeded, billing then refused the terms write, the
+-- create still answered 201, the screen said "Billing did not accept its terms" — and the terms the
+-- super_admin typed were simply GONE. Every step after the licence (billing terms, the local-llm
+-- inference-router licence, the first-admin invite) could fail with no record and no retry.
+--
+-- `provisioning` holds, per step (`licences_tenant`, `licence`, `billing_terms`, `ir_licence`,
+-- `first_invite`): status ok|failed|pending|skipped, the error code + message, attempts, last/next
+-- attempt time and a short per-(tenant, step) claim lease (`leaseUntil`). It also holds the INPUT a
+-- retry needs and nobody should have to type twice — the billing terms and the first admin's
+-- name/email — and each input is DROPPED once its step lands (billing stays the system of record for
+-- terms; CP keeps no lasting copy). services/tenant-provisioning.ts owns the shape.
+--
+-- A column on `tenants` (outside RLS, super_admin surfaces only), like 0097's
+-- `licence_revoke_pending`: no policy, no grant, and a claim is one conditional UPDATE of the row.
+-- `'{}'` = a tenant created before this migration: no record, which the UI says rather than invents.
+--
+-- FORWARD-ONLY, idempotent (runs at startup on every replica).
+
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS provisioning jsonb NOT NULL DEFAULT '{}'::jsonb;

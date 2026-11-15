@@ -1,0 +1,350 @@
+{
+  "locale": "fr",
+  "templates": {
+    "ai//extract-fields": {
+      "label": "Extraire les champs",
+      "description": "Extrait un ensemble structuré de champs à partir d'un texte libre à l'aide du modèle de langage géré (ctx.llm).",
+      "tags": ["extraction", "structuré", "nlp"],
+      "preconditions": [
+        "Le texte source est fourni sur `text`",
+        "Un schéma de champs cible est fourni sur `schema`"
+      ],
+      "postconditions": [
+        "`fields` est un objet indexé par les champs du schéma",
+        "Les champs manquants valent null plutôt que d'être inventés"
+      ],
+      "steps": [
+        { "label": "Construire l'invite", "detail": "Demandez au modèle de ne renvoyer QUE du JSON conforme au schéma ; listez chaque champ + son type." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() avec le texte ; demandez une sortie JSON stricte." },
+        { "label": "Analyser + protéger", "detail": "Analysez le JSON ; forcez les types ; mettez à null tout ce qui n'a pas été trouvé (jamais d'invention)." }
+      ]
+    },
+    "ai//classify": {
+      "label": "Classifier",
+      "description": "Attribue au texte d'entrée le libellé le plus adapté parmi un ensemble fixe, avec un score de confiance.",
+      "tags": ["classification", "étiquetage", "nlp"],
+      "preconditions": [
+        "Le texte d'entrée est sur `text`",
+        "Un ensemble fermé de libellés est sur `labels`"
+      ],
+      "postconditions": [
+        "`label` est l'un des libellés fournis (ou un `unknown` explicite)",
+        "`confidence` est compris entre 0 et 1"
+      ],
+      "steps": [
+        { "label": "Restreindre les choix", "detail": "Demandez au modèle de choisir exactement un libellé dans l'ensemble fourni." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() ; demandez { label, confidence } en JSON." },
+        { "label": "Valider", "detail": "Rejetez tout libellé hors de l'ensemble ; repliez-vous sur unknown avec une confiance faible." }
+      ]
+    },
+    "ai//summarize": {
+      "label": "Résumer",
+      "description": "Produit un résumé du texte d'entrée dont la longueur et le ton sont contrôlés.",
+      "tags": ["résumé", "nlp"],
+      "preconditions": [
+        "Le texte d'entrée est sur `text`"
+      ],
+      "postconditions": [
+        "`summary` respecte la longueur maximale + le ton demandés"
+      ],
+      "steps": [
+        { "label": "Poser les contraintes", "detail": "Encodez max_lines + le ton dans l'instruction système." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() avec le texte et les contraintes." },
+        { "label": "Tronquer", "detail": "Faites respecter la limite de lignes de façon défensive après la réponse du modèle." }
+      ]
+    },
+    "ai//generate-draft": {
+      "label": "Rédiger un brouillon",
+      "description": "Rédige un contenu à partir d'un brief court, dans le ton choisi (e-mail, réponse, description, …).",
+      "tags": ["génération", "rédaction", "nlp"],
+      "preconditions": [
+        "Un brief est fourni sur `brief`"
+      ],
+      "postconditions": [
+        "`draft` est un premier brouillon prêt à être modifié, dans le ton demandé"
+      ],
+      "steps": [
+        { "label": "Cadrer la tâche", "detail": "Indiquez au modèle le public, l'objectif et le ton." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() avec le brief ; gardez le texte modifiable, non définitif." },
+        { "label": "Renvoyer", "detail": "Renvoyez le texte du brouillon pour qu'un humain le relise + l'envoie." }
+      ]
+    },
+    "ai//route-by-intent": {
+      "label": "Router par intention",
+      "description": "Détecte l'intention de l'utilisateur dans un message et l'oriente vers l'un des gestionnaires d'un ensemble fixe.",
+      "tags": ["intention", "routage", "nlp"],
+      "preconditions": [
+        "Un message est sur `message`",
+        "Un ensemble d'intentions candidates est sur `intents`"
+      ],
+      "postconditions": [
+        "`intent` est l'une des candidates (ou `fallback`)",
+        "`confidence` est compris entre 0 et 1"
+      ],
+      "steps": [
+        { "label": "Décrire les intentions", "detail": "Donnez au modèle une description d'une ligne par intention candidate." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() ; demandez { intent, confidence } en JSON." },
+        { "label": "Filtrer", "detail": "En dessous d'un seuil de confiance, orientez vers fallback plutôt que de deviner." }
+      ]
+    },
+    "ai//redact-pii": {
+      "label": "Masquer les données personnelles",
+      "description": "Détecte et masque les données personnelles (noms, e-mails, téléphones, identifiants) dans un texte libre.",
+      "tags": ["données personnelles", "masquage", "confidentialité"],
+      "preconditions": [
+        "Le texte d'entrée est sur `text`",
+        "Les types de données personnelles à masquer sont sur `kinds`"
+      ],
+      "postconditions": [
+        "`redacted` remplace chaque passage détecté par un espace réservé typé",
+        "`found` liste ce qui a été détecté (type + nombre), jamais les valeurs brutes"
+      ],
+      "steps": [
+        { "label": "Préciser les types", "detail": "Indiquez au modèle les types de données personnelles à rechercher (e-mail, téléphone, nom, identifiant)." },
+        { "label": "Appeler le modèle", "detail": "Utilisez ctx.llm() ; demandez les passages à masquer, pas les valeurs brutes en retour." },
+        { "label": "Masquer", "detail": "Remplacez chaque passage par [REDACTED:<kind>] ; totalisez les occurrences dans `found`." }
+      ]
+    },
+    "logic//validate-record": {
+      "label": "Valider un enregistrement",
+      "description": "Contrôle un enregistrement selon un jeu de règles de champs ; laisse passer les enregistrements valides et collecte les motifs pour les invalides.",
+      "tags": ["validation", "garde-fou", "qualité des données"],
+      "preconditions": [
+        "Un objet enregistrement est disponible sur l'entrée `record`",
+        "Un jeu de règles de champs (obligatoire / type / plage) est défini"
+      ],
+      "postconditions": [
+        "`valid` vaut true uniquement si toutes les règles passent",
+        "`errors` donne un motif lisible par règle en échec"
+      ],
+      "steps": [
+        { "label": "Charger le jeu de règles", "detail": "Lisez les règles par champ depuis l'entrée `rules` (obligatoire, type, min/max, motif)." },
+        { "label": "Évaluer chaque champ", "detail": "Pour chaque règle, lisez record[field] et testez-le ; ajoutez un message à errors en cas d'échec." },
+        { "label": "Décider", "detail": "valid = errors.length === 0 ; renvoyez les deux pour que l'aval puisse brancher." }
+      ]
+    },
+    "logic//route-by-rule": {
+      "label": "Router par règle (table de décision)",
+      "description": "Choisit une branche en évaluant une table de décision ordonnée sur l'entrée — la première correspondance l'emporte.",
+      "tags": ["routage", "table de décision", "branchement"],
+      "preconditions": [
+        "Un objet d'entrée est disponible sur `item`",
+        "Une liste ordonnée de règles (condition → route) est définie"
+      ],
+      "postconditions": [
+        "`route` est le libellé de la première règle correspondante, ou la route par défaut",
+        "`matched` indique si une règle a été déclenchée"
+      ],
+      "steps": [
+        { "label": "Lire la table de décision", "detail": "Chaque règle s'écrit { when: {field, op, value}, route } ; évaluez de haut en bas." },
+        { "label": "Trouver la première correspondance", "detail": "Renvoyez la route de la première règle dont la condition est vraie pour `item`." },
+        { "label": "Se rabattre", "detail": "Si aucune règle ne correspond, renvoyez la route par défaut configurée et matched=false." }
+      ]
+    },
+    "logic//approve-reject": {
+      "label": "Approuver / rejeter (double validation)",
+      "description": "Soumet un élément à une politique interne puis à une décision humaine explicite, en consignant qui a décidé et pourquoi.",
+      "tags": ["approbation", "double validation", "gouvernance"],
+      "preconditions": [
+        "L'élément à examiner est sur `item`",
+        "Une décision (`approve` | `reject`) et l'identité du relecteur sont fournies"
+      ],
+      "postconditions": [
+        "`approved` reflète la décision du relecteur après les contrôles de politique",
+        "Une piste d'audit (relecteur, motif, horodatage) est jointe"
+      ],
+      "steps": [
+        { "label": "Appliquer les contrôles de politique", "detail": "Exécutez d'abord les garde-fous automatiques ; rejetez automatiquement tout ce qui échoue à la politique, quelle que soit la saisie humaine." },
+        { "label": "Consigner la décision humaine", "detail": "Enregistrez la décision, le relecteur et le motif pour la piste d'audit." },
+        { "label": "Émettre le résultat", "detail": "approved = policyPassed && decision === 'approve' ; incluez l'enregistrement de décision." }
+      ]
+    },
+    "logic//dedupe": {
+      "label": "Dédoublonner les lignes",
+      "description": "Fusionne les lignes partageant une même clé, en conservant une ligne survivante choisie et en comptant les doublons supprimés.",
+      "tags": ["dédoublonnage", "nettoyage", "qualité des données"],
+      "preconditions": [
+        "Une liste de lignes est disponible sur `rows`",
+        "Une clé de dédoublonnage (un ou plusieurs champs) est configurée"
+      ],
+      "postconditions": [
+        "`rows` contient au plus une ligne survivante par clé",
+        "`removed` compte le nombre de doublons supprimés"
+      ],
+      "steps": [
+        { "label": "Construire la clé", "detail": "Calculez une clé composite par ligne à partir des champs de clé configurés." },
+        { "label": "Choisir la survivante", "detail": "Pour chaque clé, gardez la première ligne (ou la plus récente selon `tiebreak`) ; écartez les autres." },
+        { "label": "Rendre compte", "detail": "Renvoyez les lignes dédoublonnées et le nombre de suppressions." }
+      ]
+    },
+    "logic//enrich-lookup": {
+      "label": "Enrichir par table de référence",
+      "description": "Joint chaque ligne à une table de référence sur une clé et y fusionne les champs de référence trouvés.",
+      "tags": ["enrichissement", "jointure", "correspondance"],
+      "preconditions": [
+        "Les lignes à enrichir sont sur `rows`",
+        "Un jeu de données / une table de référence et la clé de jointure sont disponibles"
+      ],
+      "postconditions": [
+        "Chaque ligne reçoit les champs de référence lorsqu'une correspondance est trouvée",
+        "`unmatched` compte les lignes sans correspondance de référence"
+      ],
+      "steps": [
+        { "label": "Indexer la référence", "detail": "Construisez une table associant la clé de jointure à la ligne de référence pour des accès en O(1)." },
+        { "label": "Fusionner", "detail": "Pour chaque ligne d'entrée, recherchez par clé et intégrez les champs de référence (l'entrée l'emporte en cas de conflit)." },
+        { "label": "Suivre les échecs", "detail": "Comptez les lignes sans correspondance afin de pouvoir surveiller la qualité." }
+      ]
+    },
+    "logic//threshold-flag": {
+      "label": "Marquer selon un seuil",
+      "description": "Note chaque élément et marque pour examen ceux qui franchissent un seuil configurable.",
+      "tags": ["notation", "marquage", "surveillance"],
+      "preconditions": [
+        "Les éléments à noter sont sur `items`",
+        "Un champ numérique et un seuil sont configurés"
+      ],
+      "postconditions": [
+        "`flagged` liste les éléments qui franchissent le seuil",
+        "`count` est le nombre d'éléments marqués"
+      ],
+      "steps": [
+        { "label": "Lire la mesure", "detail": "Extrayez le champ numérique de chaque élément." },
+        { "label": "Comparer", "detail": "Marquez les éléments où value >= threshold (ou <= pour une borne inférieure)." },
+        { "label": "Collecter", "detail": "Renvoyez le sous-ensemble marqué et son effectif." }
+      ]
+    },
+    "logic//map-transform": {
+      "label": "Mapper / transformer",
+      "description": "Remodèle chaque ligne vers un schéma cible via une correspondance de champs, en supprimant ou en renommant selon la configuration.",
+      "tags": ["transformation", "correspondance", "remodelage"],
+      "preconditions": [
+        "Les lignes source sont sur `rows`",
+        "Une correspondance de champs (source → cible) est configurée"
+      ],
+      "postconditions": [
+        "Chaque ligne de sortie ne contient que les champs cibles mappés",
+        "L'ordre des lignes est préservé"
+      ],
+      "steps": [
+        { "label": "Lire la correspondance", "detail": "La correspondance s'écrit { targetField: sourceField }." },
+        { "label": "Projeter chaque ligne", "detail": "Construisez un nouvel objet par ligne à l'aide de la correspondance ; ignorez les champs non mappés." },
+        { "label": "Renvoyer", "detail": "Émettez les lignes transformées dans l'ordre d'origine." }
+      ]
+    },
+    "logic//aggregate": {
+      "label": "Agréger / grouper",
+      "description": "Groupe les lignes par une clé et calcule des agrégats (nombre / somme / moyenne) par groupe.",
+      "tags": ["agrégation", "groupement", "synthèse"],
+      "preconditions": [
+        "Les lignes sont sur `rows`",
+        "Une clé de groupement et les mesures à agréger sont configurées"
+      ],
+      "postconditions": [
+        "`groups` contient une ligne de synthèse par clé distincte",
+        "Chaque synthèse porte les agrégats demandés"
+      ],
+      "steps": [
+        { "label": "Répartir", "detail": "Groupez les lignes selon le champ group_by configuré." },
+        { "label": "Réduire", "detail": "Par groupe, calculez le nombre ainsi que la somme/moyenne de chaque champ de mesure." },
+        { "label": "Émettre", "detail": "Renvoyez une ligne par groupe avec les agrégats." }
+      ]
+    },
+    "ui//form": {
+      "label": "Formulaire",
+      "description": "Recueille et valide la saisie de l'utilisateur selon un schéma de champs, puis émet les valeurs saisies à la soumission.",
+      "tags": ["formulaire", "saisie", "collecte"],
+      "preconditions": [
+        "Un schéma de champs (libellés, types, obligatoire) est fourni sur `schema`"
+      ],
+      "postconditions": [
+        "`values` contient les champs saisis une fois le formulaire soumis",
+        "`submitted` ne passe à true qu'après la validation côté client"
+      ],
+      "steps": [
+        { "label": "Afficher les champs", "detail": "Construisez les champs de saisie à partir du schéma (texte / nombre / liste / case à cocher)." },
+        { "label": "Valider", "detail": "Bloquez la soumission tant que des champs obligatoires manquent ou que des types sont invalides." },
+        { "label": "Émettre", "detail": "À la soumission, renvoyez les valeurs recueillies et submitted=true." }
+      ]
+    },
+    "ui//table": {
+      "label": "Tableau / liste",
+      "description": "Affiche des lignes dans un tableau triable et sélectionnable à partir d'une définition de colonnes.",
+      "tags": ["tableau", "liste", "grille"],
+      "preconditions": [
+        "Les lignes sont fournies sur `rows`",
+        "Une définition de colonnes est fournie sur `columns`"
+      ],
+      "postconditions": [
+        "`selected` reflète la ou les lignes choisies par l'utilisateur"
+      ],
+      "steps": [
+        { "label": "Définir les colonnes", "detail": "Associez chaque colonne à un champ de ligne + un en-tête + un formateur facultatif." },
+        { "label": "Afficher les lignes", "detail": "Affichez les lignes ; permettez le tri par colonne et la sélection de lignes." },
+        { "label": "Émettre la sélection", "detail": "Renvoyez la ou les lignes sélectionnées lorsque l'utilisateur clique." }
+      ]
+    },
+    "ui//chart": {
+      "label": "Graphique",
+      "description": "Visualise une ou plusieurs séries sous forme de courbe, de barres ou de secteurs.",
+      "tags": ["graphique", "visualisation", "rapport"],
+      "preconditions": [
+        "Les données de série sont fournies sur `series`"
+      ],
+      "postconditions": [
+        "Le graphique s'affiche selon le `type` choisi"
+      ],
+      "steps": [
+        { "label": "Choisir un type de graphique", "detail": "courbe pour les tendances, barres pour les comparaisons, secteurs pour la composition." },
+        { "label": "Associer les données", "detail": "Associez les points de série aux axes / aux secteurs." },
+        { "label": "Tracer", "detail": "Tracez le graphique avec les libellés d'axes + une légende." }
+      ]
+    },
+    "ui//kpi-card": {
+      "label": "Carte KPI",
+      "description": "Affiche un indicateur clé unique avec une variation facultative par rapport à la période précédente.",
+      "tags": ["kpi", "indicateur", "tableau de bord"],
+      "preconditions": [
+        "Un libellé et une valeur numérique sont fournis"
+      ],
+      "postconditions": [
+        "L'indicateur + le sens de la variation s'affichent"
+      ],
+      "steps": [
+        { "label": "Afficher la valeur", "detail": "Affichez le chiffre principal avec son libellé." },
+        { "label": "Afficher la variation", "detail": "Si une variation est fournie, indiquez la hausse/baisse avec le signe + la couleur." }
+      ]
+    },
+    "ui//detail-view": {
+      "label": "Vue détaillée",
+      "description": "Affiche un enregistrement unique sous forme de panneau de détail libellé/valeur en lecture seule.",
+      "tags": ["détail", "enregistrement", "lecture seule"],
+      "preconditions": [
+        "Un enregistrement est fourni sur `record`"
+      ],
+      "postconditions": [
+        "Les champs sélectionnés s'affichent en lignes libellé/valeur"
+      ],
+      "steps": [
+        { "label": "Choisir les champs", "detail": "Utilisez `fields` pour choisir + ordonner les clés à afficher (par défaut : toutes)." },
+        { "label": "Afficher", "detail": "Affichez chacune en ligne libellé/valeur ; formatez les dates + les nombres." }
+      ]
+    },
+    "ui//filter-bar": {
+      "label": "Barre de filtres",
+      "description": "Affiche un ensemble de contrôles de filtre et émet la requête correspondante à mesure que l'utilisateur les modifie.",
+      "tags": ["filtre", "recherche", "contrôles"],
+      "preconditions": [
+        "Une définition des champs de filtre est fournie sur `fields`"
+      ],
+      "postconditions": [
+        "`query` reflète les sélections de filtre en cours",
+        "`changed` se déclenche dès qu'un contrôle change"
+      ],
+      "steps": [
+        { "label": "Afficher les contrôles", "detail": "Construisez un contrôle par champ (texte / liste / plage de dates)." },
+        { "label": "Collecter", "detail": "À chaque changement, assemblez les filtres actifs en un objet de requête." },
+        { "label": "Émettre", "detail": "Renvoyez la requête pour qu'un bloc de données en aval puisse recharger." }
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+-- 0086 — the calendar does not decide a challenge's phase. Solutions do.
+--
+-- WHY THIS EXISTS
+-- Until the commit that carries this migration, two mechanisms in host/cycle-service.ts advanced a
+-- challenge to `solution_phase` purely because its ISO week had passed:
+--   1. `enterSolutionPhase` — swept every challenge in a closing week into `solution_phase` on a
+--                             one-week timer, whether or not anyone had filed a solution.
+--   2. `healOrphanedChallenges` — advanced anything in a week no tick could reach, same trigger.
+-- Both are deleted in this commit. `routes/solutions.ts` becomes the ONLY writer of this transition:
+-- a challenge advances to `solution_phase` when its first solution is filed, and nowhere else.
+-- `cycle-eligibility.ts`'s read-side arm was already correct from #348 and needed no change here.
+--
+-- New invariant: `challenges.status = 'solution_phase'` IFF the challenge has >=1 solution;
+-- `'voting'` otherwise. `'closed'` is unwritable (per 0085).
+--
+-- THE PRODUCT RULE THEY VIOLATED
+-- A challenge can legitimately wait months for someone able to solve it. At a large company holding
+-- thousands of challenges that is the NORMAL case, not an edge case. 0085 already stopped the
+-- calendar from CLOSING a challenge on a timer — but the calendar still ENDED its voting phase on a
+-- one-week timer regardless of whether a solution existed. That is the same complaint 0085 fixed,
+-- wearing a new costume: a clock deciding something only human/engine activity should decide.
+--
+-- ⛔ WHY REOPENING TO `voting` CANNOT DESTROY A HUMAN DECISION.
+-- At the time of writing there is still NO user-facing way to set a challenge's phase. Every
+-- `solution_phase` row was engine-written, by one of the two calendar-driven writers above or by
+-- `routes/solutions.ts` on a genuine first-solution event. Rows written by the latter are left alone
+-- by this migration's predicate (they have a solution, so `NOT EXISTS` is false for them) — only the
+-- calendar-driven rows with zero solutions are touched. That is the entire justification for a
+-- blanket repair, and it is checkable: `git log` `enterSolutionPhase` and `healOrphanedChallenges`.
+--
+-- ⚠️ THIS ARGUMENT EXPIRES. The moment any endpoint lets a human set a challenge's phase directly,
+-- the column can no longer distinguish an engine transition from a human one — exactly as 0085 said
+-- of `closed`. Any such endpoint MUST land after this migration, never before it, or a later repair
+-- of this kind becomes unsafe. If you are adding one, add an actor column at the same time.
+--
+-- MEASURED STATE (production, at the time of writing, 2026-09-02):
+--   14 challenges sat at `voting` (W23 x10, W21 x3, W33 x1) and 3 at `solution_phase` — the only 3
+--   challenges with any solution filed, 11 solutions total across them. The nightly 03:00 UTC tick
+--   was expected to advance all 14 `voting` challenges to `solution_phase` on the calendar alone
+--   (zero of them having a solution). So after that tick runs, this migration moves those same 14
+--   back to `voting`. Whether this migration runs before or after that tick, the outcome is
+--   identical: the predicate reads `solutions` directly, not a snapshot of what the tick did, so a
+--   challenge with zero solutions always lands on `voting` and one with >=1 always lands on
+--   `solution_phase`, regardless of ordering. It is idempotent for the same reason.
+--
+-- WHAT IT DOES NOT TOUCH: `solutions`, `weekly_winners`, `marketplace_cycles`, or `challenges.week`.
+-- `week` records which cycle a challenge was authored into — that is authorship history, not state —
+-- and the weekly competition (winners already decided) is untouched by this repair.
+--
+-- ⛔ ENVIRONMENT-INDEPENDENT BY DESIGN: no ISO-week literal, no dependency on production's audit
+-- rows. This corrects any dev laptop or CI database that ran the seed plus a tick, not just
+-- production — the same reasoning 0085 and 0079/0080/0082 gave for shipping this as a migration
+-- rather than a one-off script.
+UPDATE challenges c SET status = 'voting', updated_at = now()
+WHERE c.status = 'solution_phase'
+  AND NOT EXISTS (SELECT 1 FROM solutions s WHERE s.challenge_id = c.id);

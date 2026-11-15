@@ -1,0 +1,171 @@
+{
+  "category": "ui",
+  "templates": [
+    {
+      "name": "form",
+      "label": "Form",
+      "description": "Collect and validate user input against a field schema, emitting the captured values on submit.",
+      "tags": ["form", "input", "capture"],
+      "preconditions": [
+        "A field schema (labels, types, required) is provided on `schema`"
+      ],
+      "postconditions": [
+        "`values` holds the captured fields once submitted",
+        "`submitted` flips true only after client-side validation passes"
+      ],
+      "steps": [
+        { "label": "Render fields", "detail": "Build inputs from the schema (text / number / select / checkbox)." },
+        { "label": "Validate", "detail": "Block submit until required fields are present and types are valid." },
+        { "label": "Emit", "detail": "On submit, return the collected values and submitted=true." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "schema": { "type": "json", "required": true, "description": "Field schema: [{ name, label, type, required }]" },
+          "submit_label": { "type": "string", "description": "Submit button text" }
+        },
+        "outputs": {
+          "values": { "type": "json" },
+          "submitted": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "table",
+      "label": "Table / list",
+      "description": "Render rows in a sortable, selectable table from a column definition.",
+      "tags": ["table", "list", "grid"],
+      "preconditions": [
+        "Rows are provided on `rows`",
+        "A column definition is provided on `columns`"
+      ],
+      "postconditions": [
+        "`selected` reflects the row(s) the user picks"
+      ],
+      "steps": [
+        { "label": "Define columns", "detail": "Map each column to a row field + header + optional formatter." },
+        { "label": "Render rows", "detail": "Render the rows; support sort by column and row selection." },
+        { "label": "Emit selection", "detail": "Return the selected row(s) when the user clicks." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "rows": { "type": "json", "required": true },
+          "columns": { "type": "json", "required": true, "description": "[{ field, header }]" }
+        },
+        "outputs": {
+          "selected": { "type": "json" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "chart",
+      "label": "Chart",
+      "description": "Visualize one or more series as a line, bar, or pie chart.",
+      "tags": ["chart", "visualization", "report"],
+      "preconditions": [
+        "Series data is provided on `series`"
+      ],
+      "postconditions": [
+        "The chart renders for the chosen `type`"
+      ],
+      "steps": [
+        { "label": "Pick a chart type", "detail": "line for trends, bar for comparisons, pie for composition." },
+        { "label": "Map data", "detail": "Map series points to axes / slices." },
+        { "label": "Render", "detail": "Draw the chart with axis labels + a legend." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "series": { "type": "json", "required": true, "description": "[{ name, points: [{x,y}] }]" },
+          "type": { "type": "enum", "enum": ["line", "bar", "pie"] }
+        },
+        "outputs": {
+          "rendered": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "kpi-card",
+      "label": "KPI card",
+      "description": "Show a single headline metric with an optional delta against a prior period.",
+      "tags": ["kpi", "metric", "dashboard"],
+      "preconditions": [
+        "A label and numeric value are provided"
+      ],
+      "postconditions": [
+        "The metric + delta direction render"
+      ],
+      "steps": [
+        { "label": "Show the value", "detail": "Render the headline number with the label." },
+        { "label": "Show the delta", "detail": "If a delta is given, show up/down with sign + colour." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "label": { "type": "string", "required": true },
+          "value": { "type": "number", "required": true },
+          "delta": { "type": "number", "description": "Change vs the prior period" }
+        },
+        "outputs": {
+          "rendered": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "detail-view",
+      "label": "Detail view",
+      "description": "Render a single record as a read-only label/value detail panel.",
+      "tags": ["detail", "record", "read-only"],
+      "preconditions": [
+        "A record is provided on `record`"
+      ],
+      "postconditions": [
+        "The selected fields render as label/value rows"
+      ],
+      "steps": [
+        { "label": "Pick fields", "detail": "Use `fields` to choose + order which keys to show (default: all)." },
+        { "label": "Render", "detail": "Render each as a label/value row; format dates + numbers." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "record": { "type": "json", "required": true },
+          "fields": { "type": "string[]", "description": "Ordered keys to display" }
+        },
+        "outputs": {
+          "rendered": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "filter-bar",
+      "label": "Filter bar",
+      "description": "Render a set of filter controls and emit the resulting query as the user changes them.",
+      "tags": ["filter", "search", "controls"],
+      "preconditions": [
+        "A filter-field definition is provided on `fields`"
+      ],
+      "postconditions": [
+        "`query` reflects the current filter selections",
+        "`changed` fires whenever a control changes"
+      ],
+      "steps": [
+        { "label": "Render controls", "detail": "Build a control per field (text / select / date range)." },
+        { "label": "Collect", "detail": "On change, assemble the active filters into a query object." },
+        { "label": "Emit", "detail": "Return the query so a downstream data block can re-fetch." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "fields": { "type": "json", "required": true, "description": "[{ name, label, type, options? }]" },
+          "values": { "type": "json", "description": "Initial filter values" }
+        },
+        "outputs": {
+          "query": { "type": "json" },
+          "changed": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    }
+  ]
+}

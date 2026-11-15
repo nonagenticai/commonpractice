@@ -1,0 +1,160 @@
+##[endgroup]
+
+##[group]tests/connector-pool-budget.test.ts:
+(pass) concurrent connector syncs take ONE request-pool connection each and never wedge [78.00ms]
+(pass) a detached (listener-path) sync with no request context reserves exactly one [112.01ms]
+(pass) a second sync racing an in-flight one is still refused by the advisory lock [75.00ms]
+
+##[endgroup]
+
+##[group]tests/block-source-gate.test.ts:
+(pass) §1a the scan does not fire on comments, string/template literals, or member calls [6.00ms]
+(pass) §1b the scan still catches every real violation, including the three bypasses [9.00ms]
+(pass) §1c the mask never swallows real code — the seven measured false negatives [5.00ms]
+(pass) §1c a trailing comment and an EOF comment are masked too [2.00ms]
+(pass) §1c an UNPARSEABLE source falls back to the RAW text — fail safe, not fail open [4.00ms]
+(pass) §1c masking is length-preserving and newline-preserving, and ${} returns to code [6.00ms]
+(pass) §1c a violation AFTER a decoy comment is reported on the RIGHT line [2.00ms]
+(pass) §1c a module specifier is reported from the RAW source even though the rules read the mask [2.00ms]
+(pass) §1d compileDataBlock: user prose in an attribute description is not code [15.00ms]
+(pass) §1d renderSource: user prose in a template step detail is not code [4.00ms]
+(pass) every block source the product ships passes the scan [25.00ms]
+(pass) every template source the product ships passes the scan [17.00ms]
+(pass) POST /api/blocks refuses a banned source AND creates no row (clean source does create) [33.00ms]
+(pass) PATCH a draft refuses a banned source AND leaves source_ts byte-unchanged [44.00ms]
+(pass) POST a new version refuses a banned source AND creates no version row [39.00ms]
+(pass) simulate refuses a DRAFT whose stored source is banned (clean draft simulates) [110.01ms]
+(pass) run-tests refuses a DRAFT whose stored source is banned [145.01ms]
+(pass) a PUBLISHED version with a legacy banned source is NOT retro-linted at run time [429.03ms]
+(pass) models.code_exec_outside_blocks=false ENFORCES; =true lets the same source through [28.00ms]
+(pass) a clean source needs NO governance read at all (the hot path stays query-free) [3.00ms]
+(pass) the unconditional gate ignores the policy — a seed cannot be waved through [6.00ms]
+(pass) no block-write ROUTE persists a banned source (derived from the router table) [1255.08ms]
+(pass) every MCP tool that takes a source_ts refuses a banned one [193.01ms]
+(pass) the branded column is still branded (the compile-time half of the gate) [5.00ms]
+[source-gate] governance read failed; enforcing the scan warn: governance read failed (simulated)
+      at get (/home/runner/_work/commonpractice/commonpractice/backend/tests/block-source-gate.test.ts:756:52)
+      at assertBlockSourceSafe (/home/runner/_work/commonpractice/commonpractice/backend/src/blocks/source-gate.ts:123:34)
+      at <anonymous> (/home/runner/_work/commonpractice/commonpractice/backend/tests/block-source-gate.test.ts:761:59)
+
+[source-gate] governance read failed; enforcing the scan warn: governance read failed (simulated)
+      at get (/home/runner/_work/commonpractice/commonpractice/backend/tests/block-source-gate.test.ts:756:52)
+      at assertBlockSourceSafe (/home/runner/_work/commonpractice/commonpractice/backend/src/blocks/source-gate.ts:123:34)
+      at async createBlockCore (/home/runner/_work/commonpractice/commonpractice/backend/src/blocks/authoring-service.ts:180:24)
+      at async <anonymous> (/home/runner/_work/commonpractice/commonpractice/backend/src/routes/blocks.ts:565:25)
+      at async <anonymous> (/home/runner/_work/commonpractice/commonpractice/backend/src/utils/http.ts:145:20)
+      at async call (/home/runner/_work/commonpractice/commonpractice/backend/tests/block-source-gate.test.ts:96:29)
+      at async <anonymous> (/home/runner/_work/commonpractice/commonpractice/backend/tests/block-source-gate.test.ts:764:25)
+
+(pass) ⛔ a governance read that THROWS still refuses — fail closed, not fail open [28.00ms]
+(pass) ⛔ the gate MINTS the brand — the return type is pinned at typecheck, in this file [5.00ms]
+(pass) ⛔ `as ScannedSource` exists in exactly ONE module — the brand keeps its minting monopoly [19.00ms]
+(pass) the eval rule has no one-token spelling that walks past it [4.00ms]
+
+##[endgroup]
+
+##[group]tests/agent-tool-rendezvous.test.ts:
+(pass) ⛔ a tool result reported to the WRONG replica reaches the turn, and reaches it ONCE [4343.27ms]
+[run 01a038f1-4b94-7777-af89-340c5c812c44] runner stderr: [runner] fatal: Error: EPIPE: broken pipe, write
+    at writeSync (unknown)
+    at writeLine (/home/runner/_work/commonpractice/commonpractice/backend/src/exec/runner-entry.ts:73:3)
+    at executeFlow (/home/runner/_work/commonpractice/commonpractice/backend/src/exec/flow-executor.ts:539:12)
+    at async main (/home/runner/_work/commonpractice/commonpractice/backend/src/exec/runner-entry.ts:175:26)
+68 |     }
+69 |   };
+70 | }
+71 | 
+72 | function writeLine(obj: unknown): void {
+73 |   writeSync(1, `${JSON.stringify(obj)}\n`);
+       ^
+EPIPE: broken pipe, write
+      fd: 1,
+ syscall: "write",
+   errno: -32,
+    code: "EPIPE"
+
+      at writeLine (/home/runner/_work/commonpractice/commonpractice/backend/src/exec/runner-entry.ts:73:3)
+      at main (/home/runner/_work/commonpractice/commonpractice/backend/src/exec/runner-entry.ts:186:5)
+
+Bun v1.3.13 (Linux x64)
+(pass) ⛔ with the LISTEN doorbell absent, the poll floor still delivers (the NOTIFY is only latency) [5319.33ms]
+(pass) ⛔ a stranger cannot answer another user’s tool call, across replicas [8324.52ms]
+(pass) the SAME-POD fast path resolves in memory and touches the database not at all [4.00ms]
+(pass) a browser that genuinely never answers still releases the turn, and leaves no waiter behind [400.03ms]
+(pass) resolveFrontendTool still refuses an unknown key and a wrong owner, indistinguishably
+
+##[endgroup]
+
+##[group]tests/ontology-tenant-override.test.ts:
+(pass) admin adds a custom entity; a member browses it but cannot author (403) [80.01ms]
+(pass) a different org does not see the custom entity (isolation) [10.00ms]
+(pass) overriding a global entity label wins the merge for that tenant only [50.00ms]
+(pass) a custom relation appears; deleting the entity removes it and the entity [81.01ms]
+(pass) a PATCH with duplicate attribute names is refused and keeps the stored attributes [147.01ms]
+(pass) the entity-write refusals carry their localization fields on `details` [250.02ms]
+(pass) a member cannot delete a tenant entity (403) and unknown ids 404 [3.00ms]
+
+##[endgroup]
+
+##[group]tests/audit-export.test.ts:
+(pass) utcDayString + dayWindowUtc compute a clean UTC day [1.00ms]
+(pass) msUntilNextRun targets the next hour:00 UTC
+(pass) buildExportBundle pages only the day window into NDJSON with a stable sha256 [10.00ms]
+[audit-export] exported 3 rows for 2099-01-15 → artifacts/audit/2099/01/15/manifest.json
+[audit-export] exported 3 rows for 2099-01-15 → artifacts/audit/2099/01/15/manifest.json
+(pass) runExport uploads body + manifest, records success, and is idempotent [400.03ms]
+[audit-export] export FAILED for 2099-01-15: storage boom
+(pass) an upload failure is recorded as error (never thrown) [280.02ms]
+[audit-export] exported 0 rows for 2099-02-02 → artifacts/audit/2099/02/02/manifest.json
+[audit-export] exported 0 rows for 2099-02-03 → artifacts/audit/2099/02/03/manifest.json
+(pass) a tick for one day does NOT starve the next day (the shared-key bug that lost 2 prod days) [511.03ms]
+[audit-export] exported 0 rows for 2099-02-02 → artifacts/audit/2099/02/02/manifest.json
+[audit-export] tick for 2099-02-02 SKIPPED — already claimed within the debounce window
+(pass) the same day claimed twice exports once — the boot catch-up must not double-export [197.01ms]
+[audit-export] 4 day(s) missing in the trailing 14-day window through 2099-02-06: 2099-02-02, 2099-02-03, 2099-02-04, 2099-02-05
+[audit-export] backfilling 4 missed day(s): 2099-02-02, 2099-02-03, 2099-02-04, 2099-02-05
+[audit-export] exported 0 rows for 2099-02-02 → artifacts/audit/2099/02/02/manifest.json
+[audit-export] exported 0 rows for 2099-02-03 → artifacts/audit/2099/02/03/manifest.json
+[audit-export] exported 0 rows for 2099-02-04 → artifacts/audit/2099/02/04/manifest.json
+[audit-export] exported 0 rows for 2099-02-05 → artifacts/audit/2099/02/05/manifest.json
+[audit-export] exported 0 rows for 2099-02-06 → artifacts/audit/2099/02/06/manifest.json
+(pass) a missed day is backfilled by the next tick instead of being lost forever [529.03ms]
+[audit-export] 1 day(s) missing in the trailing 14-day window through 2099-02-05: 2099-02-02
+[audit-export] backfilling 1 missed day(s): 2099-02-02
+[audit-export] exported 0 rows for 2099-02-02 → artifacts/audit/2099/02/02/manifest.json
+[audit-export] exported 0 rows for 2099-02-05 → artifacts/audit/2099/02/05/manifest.json
+(pass) an INTERIOR hole is healed — the case a forward walk from max(success) can never see [261.02ms]
+[audit-export] 1 day(s) missing in the trailing 14-day window through 2099-02-06: 2099-02-05
+[audit-export] backfilling 1 missed day(s): 2099-02-05
+[audit-export] exported 0 rows for 2099-02-05 → artifacts/audit/2099/02/05/manifest.json
+[audit-export] exported 0 rows for 2099-02-06 → artifacts/audit/2099/02/06/manifest.json
+(pass) days before the first-ever successful export are not owed an archive [334.02ms]
+
+##[endgroup]
+
+ 1828 pass
+ 0 fail
+ 7342 expect() calls
+Ran 1828 tests across 197 files. [166.86s]
+##[group]Run # Guard for the case where an earlier step (typecheck, the hook-timeout guard) failed
+[36;1m# Guard for the case where an earlier step (typecheck, the hook-timeout guard) failed[0m
+[36;1m# first and the tests never ran, so the log file was never created — that must not itself[0m
+[36;1m# fail this display-only step and add noise on top of the real failure.[0m
+[36;1mif [ -f /tmp/backend-test.log ]; then tail -n 200 /tmp/backend-test.log; else echo "no backend-test.log (an earlier step failed first — tests did not run)"; fi[0m
+shell: /usr/bin/bash -e {0}
+env:
+  REGISTRY: registry.example.com:5000
+  BACKEND_IMAGE: commonpractice-backend
+  FRONTEND_IMAGE: commonpractice-frontend
+##[endgroup]
+(pass) ?limit=200 returns MORE than DATASET_PREVIEW_ROWS rows [8.00ms]
+(pass) the clamp holds at the ceiling — a limit above DATASET_PREVIEW_ROWS * 4 is capped, not honoured [4.00ms]
+(pass) the floor holds at 1 — a negative limit never means "everything" or "nothing" [18.00ms]
+(pass) ?offset moves the window, so the rows beyond the first page are actually reachable [10.00ms]
+
+##[endgroup]
+
+##[group]tests/metering-cross-tenant-cap.test.ts:
+(pass) the daily cap survives a tenant scope-switch — THE 0059 BUG [84.01ms]
+(pass) the cap survives a scope-switch UNDER cp_app — the production failure mode [87.01ms]
+(pass) the untargeted ON CONFLICT still de-duplicates — negative control for the arbiter [99.01ms]

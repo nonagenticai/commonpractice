@@ -1,0 +1,115 @@
+{
+  "seed_key": "claim-form-summary",
+  "category": "claims",
+  "name": "Claim form summary",
+  "description": "Reads a claim form, picks out the key fields and writes a short summary.",
+  "i18n": {
+    "nl": {
+      "name": "Samenvatting schadeformulier",
+      "description": "Leest een schadeformulier, haalt de belangrijkste velden eruit en schrijft een korte samenvatting."
+    },
+    "de": {
+      "name": "Zusammenfassung Schadenformular",
+      "description": "Liest ein Schadenformular, erfasst die wichtigsten Felder und schreibt eine kurze Zusammenfassung."
+    },
+    "fr": {
+      "name": "Synthèse du formulaire de sinistre",
+      "description": "Lit un formulaire de sinistre, extrait les champs clés et rédige une courte synthèse."
+    },
+    "es": {
+      "name": "Resumen del parte de siniestro",
+      "description": "Lee un parte de siniestro, extrae los campos clave y redacta un breve resumen."
+    },
+    "pl": {
+      "name": "Podsumowanie formularza szkody",
+      "description": "Odczytuje formularz szkody, wyodrębnia najważniejsze pola i pisze krótkie podsumowanie."
+    },
+    "ar": {
+      "name": "ملخص نموذج المطالبة",
+      "description": "يقرأ نموذج المطالبة ويستخرج الحقول الأساسية ويكتب ملخصًا قصيرًا."
+    },
+    "he": {
+      "name": "סיכום טופס תביעה",
+      "description": "קורא טופס תביעה, שולף את השדות העיקריים וכותב סיכום קצר."
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "n1",
+        "slug": "read-claim-form",
+        "category": "data",
+        "config": {},
+        "position": {
+          "x": 80,
+          "y": 160
+        }
+      },
+      {
+        "id": "n2",
+        "slug": "extract-fields",
+        "category": "ai",
+        "config": {
+          "fields": [
+            "claim_id",
+            "policy_no",
+            "amount",
+            "incident_date"
+          ]
+        },
+        "position": {
+          "x": 380,
+          "y": 60
+        }
+      },
+      {
+        "id": "n3",
+        "slug": "ai-summarize",
+        "category": "ai",
+        "config": {
+          "max_lines": 5,
+          "tone": "neutral"
+        },
+        "position": {
+          "x": 380,
+          "y": 260
+        }
+      },
+      {
+        "id": "n4",
+        "slug": "format-output",
+        "category": "output",
+        "config": {
+          "format": "note"
+        },
+        "position": {
+          "x": 680,
+          "y": 260
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n1",
+        "sourceHandle": "text",
+        "target": "n2",
+        "targetHandle": "document"
+      },
+      {
+        "id": "e2",
+        "source": "n1",
+        "sourceHandle": "text",
+        "target": "n3",
+        "targetHandle": "text"
+      },
+      {
+        "id": "e3",
+        "source": "n3",
+        "sourceHandle": "summary",
+        "target": "n4",
+        "targetHandle": "content"
+      }
+    ]
+  }
+}

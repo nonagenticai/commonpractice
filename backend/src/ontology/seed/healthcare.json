@@ -1,0 +1,61 @@
+{
+  "$comment": "Phase 3.2 Healthcare overlay (shallow). Note: `Claim` also exists in the insurance overlay — relation resolution prefers the same industry, so healthcare relations bind to the healthcare Claim.",
+  "industry": "healthcare",
+  "entities": [
+    {
+      "name": "Patient",
+      "label": "Patient",
+      "synonyms": ["pt", "subject"],
+      "description": "A person receiving care.",
+      "attributes": [
+        { "name": "patient_id", "type": "string", "synonyms": ["mrn", "pt_id"] },
+        { "name": "name", "type": "string", "pii": true },
+        { "name": "dob", "type": "date", "synonyms": ["birth_date"], "pii": true },
+        { "name": "sex", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Encounter",
+      "label": "Encounter",
+      "synonyms": ["visit", "admission"],
+      "description": "A single interaction between a patient and a provider.",
+      "attributes": [
+        { "name": "encounter_id", "type": "string", "synonyms": ["visit_id"] },
+        { "name": "kind", "type": "string", "synonyms": ["type"] },
+        { "name": "started_at", "type": "date", "synonyms": ["admit_date"] }
+      ],
+      "relations": [
+        { "to": "Patient", "predicate": "for", "label": "for patient", "cardinality": "many-to-one" },
+        { "to": "Provider", "predicate": "by", "label": "seen by", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Claim",
+      "label": "Healthcare Claim",
+      "synonyms": ["clm", "billing_claim"],
+      "description": "A billing claim submitted to a payer for an encounter.",
+      "attributes": [
+        { "name": "claim_id", "type": "string", "synonyms": ["clm_id"] },
+        { "name": "amount", "type": "number", "synonyms": ["billed_amt", "charge"] },
+        { "name": "payer", "type": "string", "synonyms": ["insurer"] },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Encounter", "predicate": "from", "label": "billed from", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Provider",
+      "label": "Provider",
+      "synonyms": ["clinician", "physician", "npi"],
+      "description": "A clinician or facility delivering care.",
+      "attributes": [
+        { "name": "provider_id", "type": "string", "synonyms": ["npi"] },
+        { "name": "name", "type": "string", "pii": true },
+        { "name": "specialty", "type": "string" }
+      ],
+      "relations": []
+    }
+  ]
+}

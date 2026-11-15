@@ -1,0 +1,251 @@
+{
+  "category": "logic",
+  "templates": [
+    {
+      "name": "validate-record",
+      "label": "Validate record",
+      "description": "Check a record against a field ruleset; pass valid records, collect reasons for invalid ones.",
+      "tags": ["validation", "guard", "data-quality"],
+      "preconditions": [
+        "A record object is available on the `record` input",
+        "A field ruleset (required / type / range) is defined"
+      ],
+      "postconditions": [
+        "`valid` is true only when every rule passes",
+        "`errors` lists a human-readable reason per failed rule"
+      ],
+      "steps": [
+        { "label": "Load the ruleset", "detail": "Read the per-field rules from the `rules` input (required, type, min/max, pattern)." },
+        { "label": "Evaluate each field", "detail": "For every rule, read record[field] and test it; push a message to errors on failure." },
+        { "label": "Decide", "detail": "valid = errors.length === 0; return both so downstream can branch." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "record": { "type": "json", "required": true, "description": "The record to validate" },
+          "rules": { "type": "json", "description": "Per-field rules: { field: { required?, type?, min?, max?, pattern? } }" }
+        },
+        "outputs": {
+          "valid": { "type": "boolean" },
+          "errors": { "type": "string[]" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "route-by-rule",
+      "label": "Route by rule (decision table)",
+      "description": "Pick a branch label by evaluating an ordered decision table against the input — first match wins.",
+      "tags": ["routing", "decision-table", "branching"],
+      "preconditions": [
+        "An input object is available on `item`",
+        "An ordered list of rules (condition → route) is defined"
+      ],
+      "postconditions": [
+        "`route` is the label of the first matching rule, or the default",
+        "`matched` indicates whether any rule fired"
+      ],
+      "steps": [
+        { "label": "Read the decision table", "detail": "Each rule is { when: {field, op, value}, route }; evaluate top to bottom." },
+        { "label": "Find first match", "detail": "Return the route of the first rule whose condition holds for `item`." },
+        { "label": "Fall back", "detail": "If no rule matches, return the configured default route and matched=false." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "item": { "type": "json", "required": true, "description": "The item to route" },
+          "rules": { "type": "json", "required": true, "description": "Ordered [{ when:{field,op,value}, route }]" },
+          "default_route": { "type": "string", "description": "Route when nothing matches" }
+        },
+        "outputs": {
+          "route": { "type": "string" },
+          "matched": { "type": "boolean" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "approve-reject",
+      "label": "Approve / reject (four-eyes)",
+      "description": "Gate an item on a policy plus an explicit human decision, recording who decided and why.",
+      "tags": ["approval", "four-eyes", "governance"],
+      "preconditions": [
+        "An item under review is on `item`",
+        "A decision (`approve` | `reject`) and reviewer identity are supplied"
+      ],
+      "postconditions": [
+        "`approved` reflects the reviewer decision after policy checks",
+        "An audit trail (reviewer, reason, timestamp) is attached"
+      ],
+      "steps": [
+        { "label": "Apply policy pre-checks", "detail": "Run automatic guards first; auto-reject anything that fails policy regardless of the human input." },
+        { "label": "Record the human decision", "detail": "Capture decision, reviewer, and reason for the audit trail." },
+        { "label": "Emit outcome", "detail": "approved = policyPassed && decision === 'approve'; include the decision record." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "item": { "type": "json", "required": true },
+          "decision": { "type": "enum", "required": true, "enum": ["approve", "reject"] },
+          "reviewer": { "type": "string", "required": true, "description": "Reviewer identity for the audit trail" },
+          "reason": { "type": "string" }
+        },
+        "outputs": {
+          "approved": { "type": "boolean" },
+          "record": { "type": "json", "description": "Decision record: { reviewer, decision, reason }" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "dedupe",
+      "label": "Deduplicate rows",
+      "description": "Collapse rows that share a key, keeping a chosen survivor and counting duplicates removed.",
+      "tags": ["dedupe", "cleanup", "data-quality"],
+      "preconditions": [
+        "A list of rows is available on `rows`",
+        "A dedupe key (one or more fields) is configured"
+      ],
+      "postconditions": [
+        "`rows` contains at most one survivor per key",
+        "`removed` counts how many duplicates were dropped"
+      ],
+      "steps": [
+        { "label": "Build the key", "detail": "Compute a composite key per row from the configured key fields." },
+        { "label": "Pick a survivor", "detail": "For each key keep the first (or newest by `tiebreak`) row; drop the rest." },
+        { "label": "Report", "detail": "Return the deduped rows and the count removed." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "rows": { "type": "json", "required": true, "description": "Array of row objects" },
+          "key_fields": { "type": "string[]", "required": true },
+          "tiebreak": { "type": "string", "description": "Field to keep the max of when keys collide" }
+        },
+        "outputs": {
+          "rows": { "type": "json" },
+          "removed": { "type": "number" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "enrich-lookup",
+      "label": "Enrich via lookup",
+      "description": "Join each row with a reference table on a key, merging the matched reference fields in.",
+      "tags": ["enrich", "join", "lookup"],
+      "preconditions": [
+        "Rows to enrich are on `rows`",
+        "A reference dataset/table and the join key are available"
+      ],
+      "postconditions": [
+        "Each row gains the reference fields when a match is found",
+        "`unmatched` counts rows with no reference match"
+      ],
+      "steps": [
+        { "label": "Index the reference", "detail": "Build a map from join key to reference row for O(1) lookups." },
+        { "label": "Merge", "detail": "For each input row, look up by key and spread the reference fields in (input wins on conflicts)." },
+        { "label": "Track misses", "detail": "Count rows with no match so quality can be monitored." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "rows": { "type": "json", "required": true },
+          "reference": { "type": "dataset", "required": true, "description": "Reference rows to join against" },
+          "key": { "type": "string", "required": true }
+        },
+        "outputs": {
+          "rows": { "type": "json" },
+          "unmatched": { "type": "number" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "threshold-flag",
+      "label": "Threshold flag",
+      "description": "Score each item and flag those crossing a configurable threshold for review.",
+      "tags": ["scoring", "flag", "monitoring"],
+      "preconditions": [
+        "Items to score are on `items`",
+        "A numeric field and threshold are configured"
+      ],
+      "postconditions": [
+        "`flagged` lists the items that cross the threshold",
+        "`count` is the number flagged"
+      ],
+      "steps": [
+        { "label": "Read the metric", "detail": "Extract the numeric field from each item." },
+        { "label": "Compare", "detail": "Flag items where value >= threshold (or <= for lower bounds)." },
+        { "label": "Collect", "detail": "Return the flagged subset and its count." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "items": { "type": "json", "required": true },
+          "field": { "type": "string", "required": true },
+          "threshold": { "type": "number", "required": true },
+          "direction": { "type": "enum", "enum": ["above", "below"] }
+        },
+        "outputs": {
+          "flagged": { "type": "json" },
+          "count": { "type": "number" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "map-transform",
+      "label": "Map / transform",
+      "description": "Reshape each row to a target schema via a field mapping, dropping or renaming as configured.",
+      "tags": ["transform", "mapping", "reshape"],
+      "preconditions": [
+        "Source rows are on `rows`",
+        "A field mapping (source → target) is configured"
+      ],
+      "postconditions": [
+        "Each output row has only the mapped target fields",
+        "Row order is preserved"
+      ],
+      "steps": [
+        { "label": "Read the mapping", "detail": "mapping is { targetField: sourceField }." },
+        { "label": "Project each row", "detail": "Build a new object per row using the mapping; skip unmapped fields." },
+        { "label": "Return", "detail": "Emit the transformed rows in the original order." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "rows": { "type": "json", "required": true },
+          "mapping": { "type": "json", "required": true, "description": "{ targetField: sourceField }" }
+        },
+        "outputs": {
+          "rows": { "type": "json" }
+        },
+        "capabilities": { "network": false }
+      }
+    },
+    {
+      "name": "aggregate",
+      "label": "Aggregate / group-by",
+      "description": "Group rows by a key and compute aggregates (count / sum / avg) per group.",
+      "tags": ["aggregate", "group-by", "summary"],
+      "preconditions": [
+        "Rows are on `rows`",
+        "A group key and the measures to aggregate are configured"
+      ],
+      "postconditions": [
+        "`groups` holds one summary row per distinct key",
+        "Each summary carries the requested aggregates"
+      ],
+      "steps": [
+        { "label": "Bucket", "detail": "Group rows by the configured group_by field." },
+        { "label": "Reduce", "detail": "Per group compute count and the sum/avg of each measure field." },
+        { "label": "Emit", "detail": "Return one row per group with the aggregates." }
+      ],
+      "descriptor": {
+        "inputs": {
+          "rows": { "type": "json", "required": true },
+          "group_by": { "type": "string", "required": true },
+          "measures": { "type": "string[]", "description": "Numeric fields to sum/average" }
+        },
+        "outputs": {
+          "groups": { "type": "json" }
+        },
+        "capabilities": { "network": false }
+      }
+    }
+  ]
+}

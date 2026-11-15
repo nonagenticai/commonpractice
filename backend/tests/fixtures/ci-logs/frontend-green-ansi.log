@@ -1,0 +1,53 @@
+[0m[2m[35m$[0m [2m[1mvitest run src/lib/api/admin.onboarding.test.ts src/lib/api/agent.tool-result-report.test.ts src/lib/api/auth-fetch.test.ts src/lib/api/blocks.stream-tests-terminal.test.ts src/lib/api/connectors.test.ts src/lib/api/data-findings.test.ts src/lib/api/datasets.test.ts src/lib/api/delivery.test.ts src/lib/api/error-message.backend-contract.test.ts src/lib/api/error-message.fr-license.test.ts src/lib/api/error-message.test.ts src/lib/api/error-message.wire.test.ts src/lib/api/flows-snapshots.test.ts src/lib/api/fr-license-codes.guard.test.ts src/lib/api/graph-issues.test.ts src/lib/api/llm-settings.test.ts src/lib/api/runs.test.ts src/lib/api/solutions.create.test.ts "src/lib/i18n/block-cost-label.test.ts" "src/lib/i18n/block-test-error-label.backend-contract.test.ts" "src/lib/i18n/compliance-label.test.ts" "src/lib/i18n/connection-test-label.fr-license.test.ts" "src/lib/i18n/connection-test-label.test.ts" "src/lib/i18n/data-finding-label.backend-contract.test.ts" "src/lib/i18n/data-finding-label.plurals.test.ts" "src/lib/i18n/data-finding-label.test.ts" "src/lib/i18n/dataset-label.backend-contract.test.ts" "src/lib/i18n/dataset-label.test.ts" "src/lib/i18n/delivery-error-label.test.ts" "src/lib/i18n/field-type-label.backend-contract.test.ts" "src/lib/i18n/field-type-label.test.ts" "src/lib/i18n/flow-summary-label.backend-contract.test.ts"[0m
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/Users/mini3/Movies/commonpractice/frontend[39m
+
+ [32m✓[39m src/lib/i18n/flow-summary-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.test.ts [2m([22m[2m210 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/block-test-error-label.backend-contract.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 77[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/data-finding-label.backend-contract.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 2[2mms[22m[39m
+(node:71897) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/lib/i18n/delivery-error-label.test.ts [2m([22m[2m22 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/data-finding-label.plurals.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+ [32m✓[39m src/lib/api/blocks.stream-tests-terminal.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m src/lib/api/solutions.create.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/connection-test-label.test.ts [2m([22m[2m64 tests[22m[2m)[22m[90m 39[2mms[22m[39m
+ [32m✓[39m src/lib/api/datasets.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/api/fr-license-codes.guard.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 119[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.wire.test.ts [2m([22m[2m40 tests[22m[2m)[22m[90m 46[2mms[22m[39m
+(node:71869) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/lib/api/data-findings.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/dataset-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/field-type-label.backend-contract.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 2[2mms[22m[39m
+ [32m✓[39m src/lib/api/runs.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/data-finding-label.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/field-type-label.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/lib/api/graph-issues.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 2[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/dataset-label.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.backend-contract.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 387[2mms[22m[39m
+(node:71962) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/lib/api/auth-fetch.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/block-cost-label.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/compliance-label.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+(node:71969) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/lib/api/delivery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/api/llm-settings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/api/admin.onboarding.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/api/flows-snapshots.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/connection-test-label.fr-license.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.fr-license.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/api/connectors.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/api/agent.tool-result-report.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1810[2mms[22m[39m
+   [33m[2m✓[22m[39m postToolResult reports across replicas[2m > [22m⛔ retries a 400 no_pending_tool — the wrong-replica answer an OLD pod still gives mid-roll [33m303[2mms[22m[39m
+   [33m[2m✓[22m[39m postToolResult reports across replicas[2m > [22mretries a network failure (no response at all) [33m302[2mms[22m[39m
+   [33m[2m✓[22m[39m postToolResult reports across replicas[2m > [22m⛔ throws — never resolves silently — once every attempt has failed [33m1203[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m32 passed[39m[22m[90m (32)[39m
+[2m      Tests [22m [1m[32m614 passed[39m[22m[90m (614)[39m
+[2m   Start at [22m 17:36:15
+[2m   Duration [22m 8.21s[2m (transform 3.30s, setup 279ms, collect 41.84s, tests 2.73s, environment 1.81s, prepare 1.50s)[22m
+

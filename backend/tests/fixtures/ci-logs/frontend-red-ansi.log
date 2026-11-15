@@ -1,0 +1,280 @@
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/runner/_work/commonpractice/commonpractice/frontend[39m
+
+ [31m❯[39m src/lib/i18n/icu-number-params.sites.test.ts [2m([22m[2m99 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 294[2mms[22m[39m
+[31m   [31m×[31m ⛔ THE INVENTORY IS COMPLETE — the assertion whose absence is the whole bug[2m > [22mevery number handed to a message is grouped, or written down here[90m 83[2mms[22m[31m[39m
+[31m     → a raw number is being passed into an ICU message and this inventory does not account for it. Wrap it, or add it to RAW_PARAM — and if it is a PLURAL message, raw is the only correct answer and the digits are grouped in the catalog via `{countNum}`.: expected [ …(50) ] to deeply equal [ …(49) ][39m
+ [32m✓[39m src/lib/api/error-message.test.ts [2m([22m[2m210 tests[22m[2m)[22m[90m 42[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-enforcement.backend-contract.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/block-test-error-label.backend-contract.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 94[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/connection-test-label.test.ts [2m([22m[2m62 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ontology-axis-label.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.backend-contract.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 409[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/flow-summary-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/vote-surface-copy.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.wire.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/catalogs.test.ts [2m([22m[2m31 tests[22m[2m)[22m[90m 59[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-label.backend-contract.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [31m❯[39m src/lib/utils/format.locale.test.ts [2m([22m[2m30 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[90m 57[2mms[22m[39m
+[31m   [31m×[31m num — grouped in the reader’s language[2m > [22m⚠️ …and 1207 is NOT a sufficient fixture on its own — pl and es do not group it at all[90m 8[2mms[22m[31m[39m
+[31m     → expected 2 to be 1 // Object.is equality[39m
+[31m   [31m×[31m num — grouped in the reader’s language[2m > [22mrenders 1234567 in all eight locales, each in its own grouping[90m 2[2mms[22m[31m[39m
+[31m     → locale ar: expected '١٬٢٣٤٬٥٦٧' to be '1,234,567' // Object.is equality[39m
+[31m   [31m×[31m exact — the reader’s punctuation on a figure that must NOT be rounded[2m > [22mis locale-aware in all eight, and not one string wearing eight names[90m 1[2mms[22m[31m[39m
+[31m     → locale ar: expected '٠٫٠٠٠١' to be '0.0001' // Object.is equality[39m
+[31m   [31m×[31m ms — a latency, punctuated for the reader[2m > [22mthe P95 pair from ops_alert_high_latency_detail, in all eight locales[90m 2[2mms[22m[31m[39m
+[31m     → locale ar p95: expected '٢٫٤٧s' to be '2.47s' // Object.is equality[39m
+[31m   [31m×[31m ms — a latency, punctuated for the reader[2m > [22m⛔ EACH BUCKET TESTS THE VALUE IT IS ABOUT TO PRINT — 999.6 is not "1.000ms"[90m 1[2mms[22m[31m[39m
+[31m     → locale ar: expected '٩٩٩ms' to be '999ms' // Object.is equality[39m
+[31m   [31m×[31m dayMonth — a chart’s day label[2m > [22mnames the month in the reader’s language, in the reader’s order[90m 5[2mms[22m[31m[39m
+[31m     → locale ar: expected '٧ أغسطس' to be '7 أغسطس' // Object.is equality[39m
+[31m   [31m×[31m hourMinute — the it-dash sparkline’s hour[2m > [22mis 24-hour in the locales that use one, and AM/PM only in the ones that do[90m 1[2mms[22m[31m[39m
+[31m     → expected '03:30' to be '14:30' // Object.is equality[39m
+[31m   [31m×[31m fullDate — a dated fact in prose[2m > [22mrenders the year in the reader’s language and order[90m 3[2mms[22m[31m[39m
+[31m     → locale ar: expected '٧ أغسطس ٢٠٢٦' to be '7 أغسطس 2026' // Object.is equality[39m
+ [32m✓[39m src/lib/challenges/challenge-state.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/routes/docs/docs-cadence.backend-contract.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 56[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/challenge-lifecycle.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/notification-label.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/scan-finding-label.backend-contract.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/graph-issue-label.backend-contract.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [31m❯[39m src/lib/i18n/icu-number-params.test.ts [2m([22m[2m26 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[90m 56[2mms[22m[39m
+[31m   [31m×[31m the counts inside an ICU message are grouped for the reader[2m > [22mrenders 1234567 in all eight locales, each in its own grouping[90m 7[2mms[22m[31m[39m
+[31m     → locale ar: expected '١٬٢٣٤٬٥٦٧ حدثًا' to contain '1,234,567'[39m
+[31m   [31m×[31m the counts inside an ICU message are grouped for the reader[2m > [22mevery plural message carries the grouping, in every one of the eight locales[2m > [22mar — all 11 messages[90m 1[2mms[22m[31m[39m
+[31m     → ar/audit_event_count did not group its count: expected '١١٬٧٧٤ حدثًا' to contain '11,774'[39m
+[31m   [31m×[31m the plural category is still chosen from the RAW number[2m > [22mPolish keeps its four categories and Arabic its six, at figures above the grouping floor[90m 1[2mms[22m[31m[39m
+[31m     → expected '١٬٢٠٧ أحداث' to be '1,207 أحداث' // Object.is equality[39m
+ [32m✓[39m src/lib/i18n/placeholder-parity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ops-alert-label.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/scan-finding-label.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/api/solutions.create.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/layout/navConfig.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/lib/services/keycloak.config-guard.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/lib/stores/builder-graph.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/delivery-error-label.test.ts [2m([22m[2m22 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/flow-summary-label.bidi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/solutions/solution-state.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/notification-label.backend-contract.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/graph-issue-label.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/lib/components/marketplace/cadence-strip.wiring.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2m⛔ a 400 the chat route really throws (`no_home_tenant`) renders the CATALOG sentence
+[22m[39m[chat] turn failed AgentApiError: User has no home tenant
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m400[39m,
+  code: [32m'no_home_tenant'[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2m⛔ a body with NO `message` never leaks agent.ts’s own English placeholder
+[22m[39m[chat] turn failed AgentApiError: HTTP 400 (chat failed)
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m400[39m,
+  code: [90mundefined[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2ma network-level failure gets the localized generic, not the browser’s English
+[22m[39m[chat] turn failed TypeError: Failed to fetch
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:132:4
+    at spy [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4mtinyspy[24m/dist/index.js:45:79[90m)[39m
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:122:22
+    at streamAgentChat [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:176:2[90m)[39m
+    at send [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.svelte.ts:137:18[90m)[39m
+    at bubbleFor [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:81:13[90m)[39m
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:131:22
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:533:10
+    at runTest [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:1056:16[90m)[39m
+    at processTicksAndRejections (native)
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2mREGRESSION GUARD: 402 keeps the licence copy `licenseOrPermissionMessage` owns
+[22m[39m[chat] turn failed AgentApiError: No active licence for this app
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m402[39m,
+  code: [32m'license_required'[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2mREGRESSION GUARD: 403 keeps the permission copy
+[22m[39m[chat] turn failed AgentApiError: Developer role required
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m403[39m,
+  code: [32m'developer_required'[39m,
+  details: [90mundefined[39m
+}
+
+ [32m✓[39m src/lib/stores/agent-chat.refusal-copy.wire.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 274[2mms[22m[39m
+ [32m✓[39m src/lib/api/datasets.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-label.test.ts [2m([22m[2m20 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/data-finding-label.backend-contract.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/types/audit-categories.backend-contract.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/routes/build/entry.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/stores/agent-chat.broker-rejection.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/routes/winner/winner-stats.backend-contract.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [31m❯[39m src/lib/utils/format.money.test.ts [2m([22m[2m18 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[90m 27[2mms[22m[39m
+[31m   [31m×[31m usd[2m > [22m⛔ ar keeps US$ even under narrowSymbol, and both RTL locales carry bidi marks[90m 6[2mms[22m[31m[39m
+[31m     → expected '\u200f١٬٢٣٤٫٥٠ US$' to be '\u200f1,234.50 US$' // Object.is equality[39m
+[31m   [31m×[31m usdEstimated[2m > [22mplaces the RTL mark before the sign, which string concatenation cannot do[90m 1[2mms[22m[31m[39m
+[31m     → expected '~\u200f١٢٫٣٤ US$' to be '\u200f~12.34 US$' // Object.is equality[39m
+ [32m✓[39m src/lib/stores/agent-chat.flow-guard.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [31m❯[39m src/lib/utils/format.demo-duration.test.ts [2m([22m[2m11 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 20[2mms[22m[39m
+[31m   [31m×[31m demoDuration() — the DECIMAL SEPARATOR belongs to the reader[2m > [22mrenders the seconds figure in all eight locales, each with its own separator[90m 6[2mms[22m[31m[39m
+[31m     → locale ar: expected 'DEMO_SEC:٣٫٤' to be 'DEMO_SEC:3.4' // Object.is equality[39m
+ [32m✓[39m src/lib/i18n/ops-event-label.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/llm/adapter-identity.backend-contract.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [31m❯[39m src/lib/i18n/ontology-changes-copy.test.ts [2m([22m[2m10 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 34[2mms[22m[39m
+[31m   [31m×[31m the "could not be linked" disclosure states what its number is[2m > [22m⛔ THE POSITIVE HALF: it is still a DISCLOSURE — the figure itself survives, grouped[90m 7[2mms[22m[31m[39m
+[31m     → ar: the count went missing from its own disclosure: expected '١١٬٧٧٤ تغييرًا في هذه الفترة تعذّر رب…' to contain '11,774'[39m
+ [32m✓[39m src/lib/stores/licenseGate.no-prose.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/graph-issue-label.bidi.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ontology-action-label.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/license-copy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/stores/licenseGate.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [31m❯[39m src/lib/i18n/ops-alert-label.plurals.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[90m 42[2mms[22m[39m
+[31m   [31m×[31m ops_alert_sandbox_error_title plurals[2m > [22mar: one / two / few / other are four DIFFERENT sentences[90m 8[2mms[22m[31m[39m
+[31m     → expected '٣ بيئات اختبار في حالة خطأ' to contain '3 بيئات'[39m
+[31m   [31m×[31m ops_alert_block_errors_detail plurals[2m > [22mar: the dual is a different verb, not a different number[90m 1[2mms[22m[31m[39m
+[31m     → expected '٣ عمليات تشغيل فاشلة خلال آخر 7 أيام …' to contain '3 عمليات'[39m
+ [31m❯[39m src/lib/i18n/data-finding-label.plurals.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 28[2mms[22m[39m
+[31m   [31m×[31m data_finding_type_mismatch plurals[2m > [22mar: one / two / few / other are four DIFFERENT sentences[90m 6[2mms[22m[31m[39m
+[31m     → expected 'العمود «amt» فيه ٣ قيم لا تطابق السمة…' to contain '3 قيم '[39m
+ [32m✓[39m src/lib/components/marketplace/cadence-day.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 43[2mms[22m[39m
+ [32m✓[39m src/lib/api/data-findings.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/field-type-label.backend-contract.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/routes/solutions/choices.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/lib/api/runs.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/routes/build/build-page.submit.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/dataset-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/utils/usage-csv.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/admin/parse-money.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/api/blocks.stream-tests-terminal.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/data-finding-label.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/field-type-label.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/components/build/build-topbar.title-visible.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/admin/license-chip.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/stores/locale.storage-failure.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 196[2mms[22m[39m
+ [32m✓[39m src/routes/pipeline/pipeline-page.no-reviewer-count.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/test/source-scan.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/work-area-label.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m src/lib/api/connectors.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+##[group]Run if [ -f /tmp/frontend-test.log ]; then tail -n 200 /tmp/frontend-test.log; else echo "no frontend-test.log (an earlier step failed first — tests did not run)"; fi
+[36;1mif [ -f /tmp/frontend-test.log ]; then tail -n 200 /tmp/frontend-test.log; else echo "no frontend-test.log (an earlier step failed first — tests did not run)"; fi[0m
+shell: /usr/bin/bash -e {0}
+env:
+  REGISTRY: registry.example.com:5000
+  BACKEND_IMAGE: commonpractice-backend
+  FRONTEND_IMAGE: commonpractice-frontend
+##[endgroup]
+$ vitest run
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/runner/_work/commonpractice/commonpractice/frontend[39m
+
+ [31m❯[39m src/lib/i18n/icu-number-params.sites.test.ts [2m([22m[2m99 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[90m 294[2mms[22m[39m
+[31m   [31m×[31m ⛔ THE INVENTORY IS COMPLETE — the assertion whose absence is the whole bug[2m > [22mevery number handed to a message is grouped, or written down here[90m 83[2mms[22m[31m[39m
+[31m     → a raw number is being passed into an ICU message and this inventory does not account for it. Wrap it, or add it to RAW_PARAM — and if it is a PLURAL message, raw is the only correct answer and the digits are grouped in the catalog via `{countNum}`.: expected [ …(50) ] to deeply equal [ …(49) ][39m
+ [32m✓[39m src/lib/api/error-message.test.ts [2m([22m[2m210 tests[22m[2m)[22m[90m 42[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-enforcement.backend-contract.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/block-test-error-label.backend-contract.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 94[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/connection-test-label.test.ts [2m([22m[2m62 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ontology-axis-label.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.backend-contract.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 409[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/flow-summary-label.backend-contract.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/vote-surface-copy.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m src/lib/api/error-message.wire.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/catalogs.test.ts [2m([22m[2m31 tests[22m[2m)[22m[90m 59[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/policy-label.backend-contract.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [31m❯[39m src/lib/utils/format.locale.test.ts [2m([22m[2m30 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[90m 57[2mms[22m[39m
+[31m   [31m×[31m num — grouped in the reader’s language[2m > [22m⚠️ …and 1207 is NOT a sufficient fixture on its own — pl and es do not group it at all[90m 8[2mms[22m[31m[39m
+[31m     → expected 2 to be 1 // Object.is equality[39m
+[31m   [31m×[31m num — grouped in the reader’s language[2m > [22mrenders 1234567 in all eight locales, each in its own grouping[90m 2[2mms[22m[31m[39m
+[31m     → locale ar: expected '١٬٢٣٤٬٥٦٧' to be '1,234,567' // Object.is equality[39m
+[31m   [31m×[31m exact — the reader’s punctuation on a figure that must NOT be rounded[2m > [22mis locale-aware in all eight, and not one string wearing eight names[90m 1[2mms[22m[31m[39m
+[31m     → locale ar: expected '٠٫٠٠٠١' to be '0.0001' // Object.is equality[39m
+[31m   [31m×[31m ms — a latency, punctuated for the reader[2m > [22mthe P95 pair from ops_alert_high_latency_detail, in all eight locales[90m 2[2mms[22m[31m[39m
+[31m     → locale ar p95: expected '٢٫٤٧s' to be '2.47s' // Object.is equality[39m
+[31m   [31m×[31m ms — a latency, punctuated for the reader[2m > [22m⛔ EACH BUCKET TESTS THE VALUE IT IS ABOUT TO PRINT — 999.6 is not "1.000ms"[90m 1[2mms[22m[31m[39m
+[31m     → locale ar: expected '٩٩٩ms' to be '999ms' // Object.is equality[39m
+[31m   [31m×[31m dayMonth — a chart’s day label[2m > [22mnames the month in the reader’s language, in the reader’s order[90m 5[2mms[22m[31m[39m
+[31m     → locale ar: expected '٧ أغسطس' to be '7 أغسطس' // Object.is equality[39m
+[31m   [31m×[31m hourMinute — the it-dash sparkline’s hour[2m > [22mis 24-hour in the locales that use one, and AM/PM only in the ones that do[90m 1[2mms[22m[31m[39m
+[31m     → expected '03:30' to be '14:30' // Object.is equality[39m
+[31m   [31m×[31m fullDate — a dated fact in prose[2m > [22mrenders the year in the reader’s language and order[90m 3[2mms[22m[31m[39m
+[31m     → locale ar: expected '٧ أغسطس ٢٠٢٦' to be '7 أغسطس 2026' // Object.is equality[39m
+ [32m✓[39m src/lib/challenges/challenge-state.test.ts [2m([22m[2m39 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/routes/docs/docs-cadence.backend-contract.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 56[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/challenge-lifecycle.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/notification-label.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/scan-finding-label.backend-contract.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/graph-issue-label.backend-contract.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [31m❯[39m src/lib/i18n/icu-number-params.test.ts [2m([22m[2m26 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[90m 56[2mms[22m[39m
+[31m   [31m×[31m the counts inside an ICU message are grouped for the reader[2m > [22mrenders 1234567 in all eight locales, each in its own grouping[90m 7[2mms[22m[31m[39m
+[31m     → locale ar: expected '١٬٢٣٤٬٥٦٧ حدثًا' to contain '1,234,567'[39m
+[31m   [31m×[31m the counts inside an ICU message are grouped for the reader[2m > [22mevery plural message carries the grouping, in every one of the eight locales[2m > [22mar — all 11 messages[90m 1[2mms[22m[31m[39m
+[31m     → ar/audit_event_count did not group its count: expected '١١٬٧٧٤ حدثًا' to contain '11,774'[39m
+[31m   [31m×[31m the plural category is still chosen from the RAW number[2m > [22mPolish keeps its four categories and Arabic its six, at figures above the grouping floor[90m 1[2mms[22m[31m[39m
+[31m     → expected '١٬٢٠٧ أحداث' to be '1,207 أحداث' // Object.is equality[39m
+ [32m✓[39m src/lib/i18n/placeholder-parity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/ops-alert-label.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/scan-finding-label.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/api/solutions.create.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/layout/navConfig.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/lib/services/keycloak.config-guard.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/lib/stores/builder-graph.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/delivery-error-label.test.ts [2m([22m[2m22 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/flow-summary-label.bidi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/solutions/solution-state.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/notification-label.backend-contract.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/lib/i18n/graph-issue-label.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m src/lib/components/marketplace/cadence-strip.wiring.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2m⛔ a 400 the chat route really throws (`no_home_tenant`) renders the CATALOG sentence
+[22m[39m[chat] turn failed AgentApiError: User has no home tenant
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m400[39m,
+  code: [32m'no_home_tenant'[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2m⛔ a body with NO `message` never leaks agent.ts’s own English placeholder
+[22m[39m[chat] turn failed AgentApiError: HTTP 400 (chat failed)
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m400[39m,
+  code: [90mundefined[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2ma network-level failure gets the localized generic, not the browser’s English
+[22m[39m[chat] turn failed TypeError: Failed to fetch
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:132:4
+    at spy [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4mtinyspy[24m/dist/index.js:45:79[90m)[39m
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:122:22
+    at streamAgentChat [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:176:2[90m)[39m
+    at send [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.svelte.ts:137:18[90m)[39m
+    at bubbleFor [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:81:13[90m)[39m
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/stores/agent-chat.refusal-copy.wire.test.ts:131:22
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:533:10
+    at runTest [90m(/home/runner/_work/commonpractice/commonpractice/frontend/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:1056:16[90m)[39m
+    at processTicksAndRejections (native)
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2mREGRESSION GUARD: 402 keeps the licence copy `licenseOrPermissionMessage` owns
+[22m[39m[chat] turn failed AgentApiError: No active licence for this app
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m402[39m,
+  code: [32m'license_required'[39m,
+  details: [90mundefined[39m
+}
+
+[90mstderr[2m | src/lib/stores/agent-chat.refusal-copy.wire.test.ts[2m > [22m[2mthe chat bubble speaks the reader’s language, through the real agent client[2m > [22m[2mREGRESSION GUARD: 403 keeps the permission copy
+[22m[39m[chat] turn failed AgentApiError: Developer role required
+    at [90m/home/runner/_work/commonpractice/commonpractice/frontend/[39msrc/lib/api/agent.ts:140:14
+    at processTicksAndRejections (native) {
+  status: [33m403[39m,
+  code: [32m'developer_required'[39m,
+  details: [90mundefined[39m

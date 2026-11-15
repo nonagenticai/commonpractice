@@ -1,0 +1,107 @@
+{
+  "seed_key": "claims-by-status",
+  "category": "reporting",
+  "name": "Claims by status",
+  "description": "Counts claims per status, shows the totals on a card and exports the list.",
+  "i18n": {
+    "nl": {
+      "name": "Schadeclaims per status",
+      "description": "Telt schadeclaims per status, toont de totalen op een kaart en exporteert de lijst."
+    },
+    "de": {
+      "name": "Schadenfälle nach Status",
+      "description": "Zählt Schadenfälle je Status, zeigt die Summen auf einer Karte und exportiert die Liste."
+    },
+    "fr": {
+      "name": "Sinistres par statut",
+      "description": "Compte les sinistres par statut, affiche les totaux sur une carte et exporte la liste."
+    },
+    "es": {
+      "name": "Siniestros por estado",
+      "description": "Cuenta los siniestros por estado, muestra los totales en una tarjeta y exporta la lista."
+    },
+    "pl": {
+      "name": "Szkody według statusu",
+      "description": "Liczy szkody według statusu, pokazuje sumy na karcie i eksportuje listę."
+    },
+    "ar": {
+      "name": "المطالبات حسب الحالة",
+      "description": "يحصي المطالبات حسب الحالة ويعرض المجاميع في بطاقة ويصدّر القائمة."
+    },
+    "he": {
+      "name": "תביעות לפי סטטוס",
+      "description": "סופר תביעות לפי סטטוס, מציג את הסיכומים בכרטיס ומייצא את הרשימה."
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "n1",
+        "slug": "example-claim-data",
+        "category": "data",
+        "config": {},
+        "position": {
+          "x": 80,
+          "y": 160
+        }
+      },
+      {
+        "id": "n2",
+        "slug": "group-and-count",
+        "category": "logic",
+        "config": {
+          "field": "status"
+        },
+        "position": {
+          "x": 380,
+          "y": 80
+        }
+      },
+      {
+        "id": "n3",
+        "slug": "summary-card",
+        "category": "ui",
+        "config": {
+          "title": "Claims by status"
+        },
+        "position": {
+          "x": 680,
+          "y": 80
+        }
+      },
+      {
+        "id": "n4",
+        "slug": "rows-to-csv",
+        "category": "output",
+        "config": {},
+        "position": {
+          "x": 380,
+          "y": 280
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n1",
+        "sourceHandle": "rows",
+        "target": "n2",
+        "targetHandle": "rows"
+      },
+      {
+        "id": "e2",
+        "source": "n2",
+        "sourceHandle": "groups",
+        "target": "n3",
+        "targetHandle": "stats"
+      },
+      {
+        "id": "e3",
+        "source": "n1",
+        "sourceHandle": "rows",
+        "target": "n4",
+        "targetHandle": "rows"
+      }
+    ]
+  }
+}

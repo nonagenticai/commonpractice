@@ -1,0 +1,240 @@
+# CI for a PUBLIC repository — self-contained, GitHub-hosted runners.
+#
+# ⛔ Why this file replaces `.github/workflows/ci-cd.yaml`:
+#   1. A public repo CANNOT consume the estate archetype: a public workflow cannot read a
+#      private repo, and the run dies at startup with zero jobs rather than failing.
+#   2. A public repo CANNOT use the ARC self-hosted pools (`allows_public_repositories:false`
+#      on both runner groups, and that must stay false: a fork PR can edit `runs-on`).
+#   3. GitHub-hosted standard runners are free and unlimited on public repos.
+#
+# ⛔ Every job is gated on `!github.event.repository.private`. The org's Actions billing is in a
+#    failed state, so a PRIVATE repo cannot start an ubuntu-latest job at all — it fails
+#    UNSTARTED (steps: [], startedAt == createdAt, no log). The gate lets this file land while
+#    the repo is private (jobs report "skipped", never red) and activate with zero edits at the
+#    flip. CI cannot be verified before the flip, so the first real run is the one after it.
+#
+# This is a Bun monorepo: `backend/` (Bun + Hono + Drizzle + PostgreSQL) and `frontend/`
+# (SvelteKit, tested with vitest under Node). Each package has its own lockfile.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.3.14"
+
+jobs:
+  secret-scan:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: install betterleaks 1.10.1 (pinned, sha256-verified)
+        run: |
+          set -euo pipefail
+          version=1.10.1
+          sha=c174b42d7aa60caf58c0c3e555c0e4bed01fe6b0d99a412bce777b5af4ce913e
+          curl -fsSL -o "$RUNNER_TEMP/betterleaks.tgz" \
+            "https://github.com/betterleaks/betterleaks/releases/download/v${version}/betterleaks_${version}_linux_x64.tar.gz"
+          echo "${sha}  $RUNNER_TEMP/betterleaks.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/betterleaks.tgz" -C "$RUNNER_TEMP" betterleaks
+      - name: scan the tree
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/betterleaks" dir --redact --exit-code 1 --no-banner \
+            --config=.betterleaks.toml \
+            --gitleaks-ignore-path .betterleaksignore .
+
+  no-private-refs:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: scan tracked files
+        run: bash scripts/ci/no-private-refs.sh
+
+  backend:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/commonpractice
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      # vitest is a Node runner; the backend only needs Node for that.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: install (locked)
+        run: cd backend && bun install --frozen-lockfile
+
+      - name: audit (high)
+        run: cd backend && bun audit --audit-level=high
+
+      - name: type check
+        run: cd backend && bun run typecheck
+
+      # Pure file parsing (TS AST, no DB): the "bun ignores bunfig's [test] timeout for HOOKS"
+      # class. Runs before the database is provisioned so a regression fails fast.
+      - name: guard against un-timed-out DB-touching test hooks
+        run: cd backend && bun run check:hooks
+
+      - name: start Postgres 18
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name ci-pg \
+            -p 127.0.0.1:5432:5432 \
+            --shm-size=1g \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=commonpractice \
+            postgres:18 -c fsync=off -c max_connections=300
+          for i in $(seq 1 60); do
+            if docker exec ci-pg pg_isready -U postgres -d commonpractice >/dev/null 2>&1; then
+              echo "postgres ready (attempt $i)"; break
+            fi
+            [ "$i" -eq 60 ] && { docker logs --tail 50 ci-pg || true; exit 1; }
+            sleep 1
+          done
+
+      - name: apply migrations
+        run: cd backend && bun run migrate
+
+      # Several route tests read seeded platform policies and demo data rather than
+      # provisioning their own. seed.ts is idempotent.
+      - name: seed
+        run: cd backend && bun run seed
+
+      # `bun run test`, never a bare `bun test`: bun 1.3.14 ignores bunfig's [test] timeout, and
+      # only the `--timeout` flag carried by the package.json script raises it off the 5 s default.
+      - name: test
+        run: cd backend && bun run test
+
+  frontend:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: install (locked)
+        run: cd frontend && bun install --frozen-lockfile
+
+      - name: audit (high)
+        run: cd frontend && bun audit --audit-level=high
+
+      # paraglide compile + svelte-kit sync + svelte-check
+      - name: check
+        run: cd frontend && bun run check
+
+      - name: test
+        run: cd frontend && bun run test
+
+  # Images: OFF by default; enable per repo with the repository variable `PUBLISH_IMAGE=true`.
+  # Two images, because this app deploys two containers. Public package: no pull secret.
+  #
+  # The backend smoke is REAL: the app self-migrates on boot, so the job starts a PostgreSQL
+  # service, runs the container against it and waits for /health. A build-only smoke would pass
+  # on an image whose migrations crash — measured locally, the boot path is what proves it.
+  image-backend:
+    if: ${{ !github.event.repository.private && vars.PUBLISH_IMAGE == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: commonpractice
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: build
+        run: docker build --file backend/Dockerfile --tag app:ci backend
+      - name: smoke (boot + migrate + health)
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name smoke --network host \
+            -e DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/commonpractice' \
+            -e PORT=8790 app:ci
+          ok=""
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8790/health 2>/dev/null | grep -q '"ok":true'; then
+              echo "health ok (attempt $i)"; ok=1; break
+            fi
+            docker logs --tail 20 smoke || true
+            sleep 2
+          done
+          docker rm -f smoke || true
+          [ -n "$ok" ] || { echo "::error::backend never became healthy"; exit 1; }
+      - name: push to ghcr.io (main only)
+        if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/${{ github.repository_owner }}/commonpractice-backend"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sha="sha-${GITHUB_SHA::7}"
+          run="$(printf 'main-%06d' "${{ github.run_number }}")"
+          for tag in "$sha" "$run" latest; do
+            docker tag app:ci "$ref:$tag"
+            docker push "$ref:$tag"
+          done
+          echo "pushed $ref:$sha $ref:$run $ref:latest"
+
+  image-frontend:
+    if: ${{ !github.event.repository.private && vars.PUBLISH_IMAGE == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: build
+        run: docker build --file frontend/Dockerfile --tag app:ci frontend
+      - name: smoke (the built app is present)
+        run: docker run --rm app:ci sh -c 'test -f build/index.js && test -d build'
+      - name: push to ghcr.io (main only)
+        if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/${{ github.repository_owner }}/commonpractice-frontend"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sha="sha-${GITHUB_SHA::7}"
+          run="$(printf 'main-%06d' "${{ github.run_number }}")"
+          for tag in "$sha" "$run" latest; do
+            docker tag app:ci "$ref:$tag"
+            docker push "$ref:$tag"
+          done
+          echo "pushed $ref:$sha $ref:$run $ref:latest"

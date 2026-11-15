@@ -1,0 +1,96 @@
+{
+  "seed_key": "sort-incoming-requests",
+  "category": "requests",
+  "name": "Sort incoming requests",
+  "description": "Summarises a request, assigns a category and asks a colleague to confirm.",
+  "i18n": {
+    "nl": {
+      "name": "Binnenkomende verzoeken sorteren",
+      "description": "Vat een verzoek samen, kent een categorie toe en laat een collega die bevestigen."
+    },
+    "de": {
+      "name": "Eingehende Anfragen sortieren",
+      "description": "Fasst eine Anfrage zusammen, ordnet eine Kategorie zu und lässt sie im Team bestätigen."
+    },
+    "fr": {
+      "name": "Trier les demandes entrantes",
+      "description": "Résume une demande, lui attribue une catégorie et la fait valider par un collègue."
+    },
+    "es": {
+      "name": "Clasificar solicitudes entrantes",
+      "description": "Resume una solicitud, le asigna una categoría y pide a un compañero que la confirme."
+    },
+    "pl": {
+      "name": "Sortowanie przychodzących zgłoszeń",
+      "description": "Podsumowuje zgłoszenie, przypisuje kategorię i prosi współpracownika o potwierdzenie."
+    },
+    "ar": {
+      "name": "فرز الطلبات الواردة",
+      "description": "يلخّص الطلب ويحدد فئته ويطلب من زميل تأكيدها."
+    },
+    "he": {
+      "name": "מיון בקשות נכנסות",
+      "description": "מסכם בקשה, משייך לה קטגוריה ומבקש מעמית לאשר."
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "n1",
+        "slug": "ai-summarize",
+        "category": "ai",
+        "config": {
+          "max_lines": 3,
+          "tone": "neutral"
+        },
+        "position": {
+          "x": 80,
+          "y": 160
+        }
+      },
+      {
+        "id": "n2",
+        "slug": "classify",
+        "category": "ai",
+        "config": {
+          "labels": [
+            "Question",
+            "Complaint",
+            "Change request",
+            "Other"
+          ]
+        },
+        "position": {
+          "x": 380,
+          "y": 160
+        }
+      },
+      {
+        "id": "n3",
+        "slug": "review-panel",
+        "category": "output",
+        "config": {},
+        "position": {
+          "x": 680,
+          "y": 160
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n1",
+        "sourceHandle": "summary",
+        "target": "n2",
+        "targetHandle": "text"
+      },
+      {
+        "id": "e2",
+        "source": "n2",
+        "sourceHandle": "label",
+        "target": "n3",
+        "targetHandle": "item"
+      }
+    ]
+  }
+}

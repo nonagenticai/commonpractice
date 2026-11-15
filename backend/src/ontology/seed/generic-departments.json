@@ -1,0 +1,312 @@
+{
+  "$comment": "Phase 3.2 generic department base layer (scope=generic). Cross-industry data objects most departments share. Shallow — depth is added later. No `industry` key => every entity is scope=generic and carries its own `department`. Relations reference the `to` entity by name (resolved within the same department, then globally).",
+  "entities": [
+    {
+      "name": "Campaign",
+      "label": "Campaign",
+      "department": "Marketing",
+      "synonyms": ["mkt_campaign", "camp"],
+      "description": "A coordinated marketing effort across one or more channels.",
+      "attributes": [
+        { "name": "campaign_id", "type": "string", "synonyms": ["camp_id"] },
+        { "name": "name", "type": "string" },
+        { "name": "budget", "type": "number", "synonyms": ["spend"] },
+        { "name": "start_date", "type": "date", "synonyms": ["launch"] },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Channel", "predicate": "runsOn", "label": "runs on", "cardinality": "many-to-many" },
+        { "to": "Audience", "predicate": "targets", "label": "targets", "cardinality": "many-to-one" },
+        { "to": "Content", "predicate": "uses", "label": "uses", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Channel",
+      "label": "Channel",
+      "department": "Marketing",
+      "synonyms": ["medium"],
+      "description": "A delivery medium for marketing (email, paid social, search).",
+      "attributes": [
+        { "name": "channel_id", "type": "string" },
+        { "name": "kind", "type": "string", "synonyms": ["type"] }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Audience",
+      "label": "Audience",
+      "department": "Marketing",
+      "synonyms": ["segment", "target_group"],
+      "description": "A targeted group of people defined by shared attributes.",
+      "attributes": [
+        { "name": "audience_id", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "size", "type": "number" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Content",
+      "label": "Content",
+      "department": "Marketing",
+      "synonyms": ["asset", "creative"],
+      "description": "A creative asset used in a campaign.",
+      "attributes": [
+        { "name": "content_id", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "format", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Lead",
+      "label": "Lead",
+      "department": "Marketing",
+      "synonyms": ["prospect", "mql"],
+      "description": "An inbound prospect captured by a marketing activity.",
+      "attributes": [
+        { "name": "lead_id", "type": "string" },
+        { "name": "email", "type": "string", "synonyms": ["email_address"], "pii": true },
+        { "name": "source", "type": "string" },
+        { "name": "score", "type": "number" }
+      ],
+      "relations": [
+        { "to": "Campaign", "predicate": "from", "label": "captured by", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Lead",
+      "label": "Lead",
+      "department": "Sales",
+      "synonyms": ["prospect", "sql"],
+      "description": "A qualified prospect a sales rep is working.",
+      "attributes": [
+        { "name": "lead_id", "type": "string" },
+        { "name": "owner", "type": "string", "synonyms": ["rep", "ae"] },
+        { "name": "stage", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Opportunity", "predicate": "becomes", "label": "converts to", "cardinality": "one-to-one" }
+      ]
+    },
+    {
+      "name": "Opportunity",
+      "label": "Opportunity",
+      "department": "Sales",
+      "synonyms": ["opp", "deal"],
+      "description": "A potential sale being pursued.",
+      "attributes": [
+        { "name": "opportunity_id", "type": "string", "synonyms": ["opp_id"] },
+        { "name": "amount", "type": "number", "synonyms": ["value"] },
+        { "name": "stage", "type": "string" },
+        { "name": "close_date", "type": "date" }
+      ],
+      "relations": [
+        { "to": "Account", "predicate": "for", "label": "for account", "cardinality": "many-to-one" },
+        { "to": "Quote", "predicate": "has", "label": "has", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Account",
+      "label": "Account",
+      "department": "Sales",
+      "synonyms": ["company", "org"],
+      "description": "A customer organization in the sales pipeline.",
+      "attributes": [
+        { "name": "account_id", "type": "string", "synonyms": ["acct_id"] },
+        { "name": "name", "type": "string" },
+        { "name": "industry", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Quote",
+      "label": "Quote",
+      "department": "Sales",
+      "synonyms": ["proposal"],
+      "description": "A priced proposal sent to a prospect.",
+      "attributes": [
+        { "name": "quote_id", "type": "string" },
+        { "name": "total", "type": "number", "synonyms": ["amount"] },
+        { "name": "valid_until", "type": "date" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Contract",
+      "label": "Contract",
+      "department": "Legal",
+      "synonyms": ["agreement"],
+      "description": "A binding agreement between parties.",
+      "attributes": [
+        { "name": "contract_id", "type": "string" },
+        { "name": "party", "type": "string", "pii": true },
+        { "name": "effective_date", "type": "date" },
+        { "name": "expiry_date", "type": "date" }
+      ],
+      "relations": [
+        { "to": "Clause", "predicate": "contains", "label": "contains", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Clause",
+      "label": "Clause",
+      "department": "Legal",
+      "synonyms": ["term", "provision"],
+      "description": "A discrete provision within a contract.",
+      "attributes": [
+        { "name": "clause_id", "type": "string" },
+        { "name": "kind", "type": "string" },
+        { "name": "text", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Obligation", "predicate": "imposes", "label": "imposes", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Obligation",
+      "label": "Obligation",
+      "department": "Legal",
+      "synonyms": ["duty"],
+      "description": "A duty arising from a contractual clause.",
+      "attributes": [
+        { "name": "obligation_id", "type": "string" },
+        { "name": "due_date", "type": "date" },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Ticket",
+      "label": "Ticket",
+      "department": "Service",
+      "synonyms": ["request", "ticket_no"],
+      "description": "A customer support request.",
+      "attributes": [
+        { "name": "ticket_id", "type": "string", "synonyms": ["ticket_no"] },
+        { "name": "subject", "type": "string" },
+        { "name": "priority", "type": "string" },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Case", "predicate": "partOf", "label": "part of", "cardinality": "many-to-one" },
+        { "to": "Customer", "predicate": "raisedBy", "label": "raised by", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Case",
+      "label": "Case",
+      "department": "Service",
+      "synonyms": ["incident"],
+      "description": "A tracked service matter spanning one or more tickets.",
+      "attributes": [
+        { "name": "case_id", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Customer", "predicate": "for", "label": "for customer", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Customer",
+      "label": "Customer",
+      "department": "Service",
+      "synonyms": ["client", "cust", "account_holder"],
+      "description": "A person or organization the company serves.",
+      "attributes": [
+        { "name": "customer_id", "type": "string", "synonyms": ["cust_id"] },
+        { "name": "name", "type": "string", "pii": true },
+        { "name": "email", "type": "string", "synonyms": ["email_address"], "pii": true },
+        { "name": "tier", "type": "string", "synonyms": ["segment"] }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Invoice",
+      "label": "Invoice",
+      "department": "Finance",
+      "synonyms": ["bill", "inv"],
+      "description": "A request for payment for goods or services.",
+      "attributes": [
+        { "name": "invoice_id", "type": "string", "synonyms": ["inv_no"] },
+        { "name": "amount", "type": "number", "synonyms": ["total"] },
+        { "name": "due_date", "type": "date" },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Payment", "predicate": "settledBy", "label": "settled by", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "label": "Payment",
+      "department": "Finance",
+      "synonyms": ["pmt", "remittance"],
+      "description": "A transfer of funds against an invoice.",
+      "attributes": [
+        { "name": "payment_id", "type": "string" },
+        { "name": "amount", "type": "number" },
+        { "name": "method", "type": "string" },
+        { "name": "paid_at", "type": "date" }
+      ],
+      "relations": [
+        { "to": "Ledger", "predicate": "postedTo", "label": "posted to", "cardinality": "many-to-one" }
+      ]
+    },
+    {
+      "name": "Ledger",
+      "label": "Ledger",
+      "department": "Finance",
+      "synonyms": ["gl", "account_ledger"],
+      "description": "The general ledger account postings are recorded against.",
+      "attributes": [
+        { "name": "ledger_id", "type": "string" },
+        { "name": "code", "type": "string", "synonyms": ["gl_code"] },
+        { "name": "balance", "type": "number" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Process",
+      "label": "Process",
+      "department": "Ops",
+      "synonyms": ["workflow", "procedure"],
+      "description": "A repeatable operational procedure.",
+      "attributes": [
+        { "name": "process_id", "type": "string" },
+        { "name": "name", "type": "string" }
+      ],
+      "relations": [
+        { "to": "Task", "predicate": "hasStep", "label": "has step", "cardinality": "one-to-many" }
+      ]
+    },
+    {
+      "name": "Task",
+      "label": "Task",
+      "department": "Ops",
+      "synonyms": ["step", "activity"],
+      "description": "A unit of work within a process.",
+      "attributes": [
+        { "name": "task_id", "type": "string" },
+        { "name": "assignee", "type": "string", "pii": true },
+        { "name": "status", "type": "string" }
+      ],
+      "relations": []
+    },
+    {
+      "name": "Employee",
+      "label": "Employee",
+      "department": "HR",
+      "synonyms": ["staff", "worker", "emp"],
+      "description": "A person employed by the company.",
+      "attributes": [
+        { "name": "employee_id", "type": "string", "synonyms": ["emp_id"] },
+        { "name": "name", "type": "string", "pii": true },
+        { "name": "department", "type": "string" },
+        { "name": "hire_date", "type": "date" }
+      ],
+      "relations": []
+    }
+  ]
+}
