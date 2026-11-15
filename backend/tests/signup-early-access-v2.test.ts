@@ -46,6 +46,7 @@ import {
   reconcileProvisioning,
   releaseClaim,
   retryProvisioningStep,
+  runStep,
 } from '../src/services/tenant-provisioning';
 import { newSignupPayload } from '../src/services/signup-telegram';
 import { acceptInvite } from '../src/services/invite-service';
@@ -1001,6 +1002,22 @@ describe('review fixes — one email, resume, one decider, domain match', () => 
     expect(
       await acceptInvite({ id: u!.id, email: 'r1@eav-co.test', name: 'E', roles: [], emailVerified: true }, { token }),
     ).toEqual({ tenantId: body.tenantId, role: 'tenant_admin' });
+  });
+
+  test('an early return from a claimed step gives the claim back — the Retry button is not locked for the lease', async () => {
+    process.env = { ...process.env, ...TG_ENV };
+    const a = await pending('r9@eav-co.test', { company: 'EAV Claimback' });
+    const body = (await (await approveViaScreen(a.id)).json()) as { tenantId: string };
+    // The approve sent the email and dropped the held requester. A sweep that now takes the
+    // claim finds nothing to do (no signupAdmin, step already ok) — the exact branch a
+    // concurrent sweep took when this file's tick-race test failed with `provisioning_step_busy`.
+    const rec = await claimStep(body.tenantId, 'invite_email');
+    if (!rec) throw new Error('the invite_email step was unexpectedly claimed');
+    await runStep(body.tenantId, 'invite_email', rec, { source: 'retry' });
+    // A claim with nothing to do must not block a Retry for the whole PROVISIONING_LEASE_MS.
+    const again = await claimStep(body.tenantId, 'invite_email');
+    expect(again).not.toBeNull();
+    await releaseClaim(body.tenantId, 'invite_email');
   });
 
   test('approve and the tick racing: exactly one email', async () => {

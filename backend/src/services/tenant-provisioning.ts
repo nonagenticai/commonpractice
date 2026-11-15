@@ -456,7 +456,12 @@ async function runBillingTerms(
   const terms = rec.terms;
   if (!terms) {
     // Nothing to send. Not a success either when the step was outstanding — say so.
-    if (prev && (prev.status === 'ok' || prev.status === 'skipped')) return { record: prev };
+    if (prev && (prev.status === 'ok' || prev.status === 'skipped')) {
+      // Give back the claim this run took: there is no write below to clear it, and the next
+      // Retry/replica would otherwise see `provisioning_step_busy` for the whole lease.
+      await releaseClaim(tenantId, 'billing_terms');
+      return { record: prev };
+    }
     const record = failureRecord('billing_terms', 'failed', prev, 'terms_not_held', 'No terms are held for this workspace; set them in its Terms section.');
     record.nextAttemptAt = null;
     await writeStep(tenantId, 'billing_terms', record);
@@ -525,7 +530,12 @@ async function runFirstInvite(tenantId: string, rec: ProvisioningRecord, ctx: St
   const prev = rec.steps?.first_invite;
   const who = rec.firstAdmin;
   if (!who) {
-    if (prev && (prev.status === 'ok' || prev.status === 'skipped')) return { record: prev };
+    if (prev && (prev.status === 'ok' || prev.status === 'skipped')) {
+      // Give back the claim this run took: there is no write below to clear it, and the next
+      // Retry/replica would otherwise see `provisioning_step_busy` for the whole lease.
+      await releaseClaim(tenantId, 'first_invite');
+      return { record: prev };
+    }
     const record = failureRecord('first_invite', 'failed', prev, 'first_admin_not_held', 'No first admin is held for this workspace; invite one from its members page.');
     await writeStep(tenantId, 'first_invite', record);
     return { record };
@@ -781,7 +791,12 @@ async function signupAdminNotHeld(
   step: 'member_seat' | 'member_licence' | 'invite_email',
   prev: StepRecord | undefined,
 ): Promise<StepRunResult> {
-  if (prev && landed(prev)) return { record: prev };
+  if (prev && landed(prev)) {
+    // Give back the claim this run took: there is no write below to clear it, and a concurrent
+    // sweep that re-claims a just-landed step would otherwise hold it for the whole lease.
+    await releaseClaim(tenantId, step);
+    return { record: prev };
+  }
   const record = failureRecord(step, 'failed', prev, 'signup_admin_not_held', 'No early-access requester is held for this workspace; invite them from its members page.');
   record.nextAttemptAt = null;
   await writeStep(tenantId, step, record);
