@@ -59,9 +59,17 @@ test('removes a channel header assembled after the pass walked over it', () => {
   ).toBe('secret plan');
 });
 
-test('strips a script tag assembled from two special tokens', () => {
-  // The shape the code-scanning alert names: `<script` must not survive.
+test('strips a fully bar-delimited marker that looks like a tag', () => {
+  // Reassembly produces `<|script|>`; it is a marker (bar-delimited) and goes.
   expect(stripReasoningTokens('<|scr<|end|>ipt|>alert(1)')).toBe('alert(1)');
+});
+
+test('leaves plain HTML tags alone — a marker requires a bar', () => {
+  // The model may legitimately show HTML in a code sample. This strip owns the
+  // harmony MARKER grammar only; HTML safety is the renderer's job (chat
+  // markdown goes through DOMPurify in frontend/src/lib/utils/markdown.ts).
+  const sample = 'Use <script> and <div class="x"> in the page.';
+  expect(stripReasoningTokens(sample)).toBe(sample);
 });
 
 // ---- StreamSanitizer (incremental, per-chunk) ----

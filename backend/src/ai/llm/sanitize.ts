@@ -8,11 +8,17 @@
 // otherwise drop the channel headers + any residual special tokens. These tokens
 // are never legitimate assistant content, so stripping is safe.
 
-// Any harmony-ish special token: <|channel|>, <|message|>, <|end|>, plus the
-// malformed half-delimited variants the model leaked (<|channel>, <channel|>).
-const SPECIAL_TOKEN = /<\|?[a-z_]+\|?>/gi;
+// A harmony marker is bar-delimited on at least one side: <|end|>, and the
+// malformed one-sided forms the model leaked (<|channel>, <channel|>). A `|` is
+// therefore REQUIRED. That is what keeps this a MARKER grammar rather than an
+// HTML sanitizer: plain tags (<script>, <div>) are legitimate model output — code
+// samples — and are left alone. HTML safety belongs to the renderer, where chat
+// markdown goes through DOMPurify (frontend/src/lib/utils/markdown.ts). Writing
+// the bars as optional made this regex match `<script>` too, which is why it read
+// as an incomplete HTML sanitizer that a single pass cannot make safe.
+const SPECIAL_TOKEN = /<\|[a-z_]+\|?>|<[a-z_]+\|>/gi;
 const CHANNEL_HEADER =
-  /<\|?channel\|?>\s*(?:analysis|thought|commentary|final)\s*(?:<\|?[a-z_]+\|?>)?/gi;
+  /(?:<\|channel\|?>|<channel\|>)\s*(?:analysis|thought|commentary|final)\s*(?:<\|[a-z_]+\|?>|<[a-z_]+\|>)?/gi;
 const LEADING_CHANNEL_WORD = /^\s*(?:analysis|thought|commentary|final)\b[ \t:]*/i;
 
 export function stripReasoningTokens(text: string): string {
