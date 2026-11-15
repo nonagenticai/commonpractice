@@ -2,6 +2,7 @@
 // to the Common Practice backend. Mirrors fr/frontend/server.js.
 import http from 'node:http';
 import { handler } from './build/handler.js';
+import { proxyRequestOptions } from './src/lib/server/proxy-target.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const BACKEND = process.env.CP_BACKEND_URL || 'http://localhost:8790';
@@ -22,11 +23,12 @@ function proxyError(res, status, code, message) {
 }
 
 const server = http.createServer((req, res) => {
-	if (req.url?.startsWith('/api/')) {
-		const target = new URL(req.url, BACKEND);
+	// The destination comes from BACKEND alone; a client target that names its own host is
+	// refused here rather than proxied (see proxy-target.js — this is the js/request-forgery fix).
+	const target = proxyRequestOptions(req, BACKEND);
+	if (target) {
 		const proxyReq = http.request(
 			target,
-			{ method: req.method, headers: { ...req.headers, host: target.host } },
 			(proxyRes) => {
 				res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
 				proxyRes.pipe(res);
