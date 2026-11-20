@@ -13,7 +13,14 @@ WORKDIR /app
 
 # Deps first for layer caching
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile || bun install
+# Production dependencies only. The image is the RUNTIME: nothing under src/ or
+# scripts/ imports drizzle-kit (only backend/drizzle.config.ts does, for the
+# db:generate/db:studio developer commands). Installing the full lock pulled
+# drizzle-kit -> @esbuild-kit -> esbuild 0.18/0.25 into app/node_modules, and
+# those bundled Go binaries were the image's only fixable CRITICALs
+# (stdlib 1.20.7 / 1.23.12, unpatched upstream). The CI test job still installs
+# the full lock; only the image is pruned.
+RUN bun install --frozen-lockfile --production || bun install --production
 
 # Source + config
 COPY tsconfig.json bunfig.toml drizzle.config.ts index.ts ./
