@@ -1,5 +1,5 @@
 ARG BASE_REGISTRY=docker.io
-FROM ${BASE_REGISTRY}/oven/bun:1.3.13
+FROM ${BASE_REGISTRY}/oven/bun:1.4.4
 
 # Phase 2-C: the backend drives Kata run pods via the kubectl binary (Bun's HTTPS
 # stack can't reach the k3s apiserver, but kubectl can). Download a server-matched

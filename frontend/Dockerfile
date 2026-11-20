@@ -1,5 +1,5 @@
 ARG BASE_REGISTRY=docker.io
-FROM ${BASE_REGISTRY}/oven/bun:1.3.13 AS build
+FROM ${BASE_REGISTRY}/oven/bun:1.4.4 AS build
 
 # Vite bakes these into the client bundle at build time (import.meta.env). The SPA
 # reads them in src/lib/services/keycloak.ts for browser OIDC. CI passes the prod
@@ -26,7 +26,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-FROM ${BASE_REGISTRY}/oven/bun:1.3.13
+FROM ${BASE_REGISTRY}/oven/bun:1.4.4
 WORKDIR /app
 COPY --from=build /app/build ./build
 COPY --from=build /app/server.js ./server.js
